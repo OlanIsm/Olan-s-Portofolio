@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>OLAN.DEV — 3D World</title>
+<meta name="description" content="Portfolio of Olan — CS student at BINUS University. Explore a 3D pixel-art world showcasing projects, skills, and contact info.">
+<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<canvas id="c"></canvas>
+<div id="scanlines"></div>
+<div id="vignette"></div>
+<div id="noise"></div>
+<div id="cur"></div>
+<div id="obj-label"></div>
+
+<!-- LOADER -->
+<div id="loader">
+  <div class="loader-text">LOADING OLAN.DEV...</div>
+</div>
+
+<!-- MAIN MENU -->
+<div id="menu">
+  <div class="menu-title">OLAN.DEV</div>
+  <div class="menu-sub">// Portfolio v2.0 · CS @ BINUS</div>
+
+  <div class="menu-items">
+    <div class="menu-corner tl">┌─</div>
+    <div class="menu-corner br">─┘</div>
+    <div class="menu-item" data-action="enter">
+      <span class="arrow">▶</span>
+      <span>ENTER WORLD</span>
+    </div>
+    <div class="menu-item" data-action="projects">
+      <span class="arrow">▶</span>
+      <span>VIEW PROJECTS</span>
+    </div>
+    <div class="menu-item disabled" data-action="about">
+      <span class="arrow">▶</span>
+      <span>ABOUT ME</span>
+      <span class="coming-soon">SOON</span>
+    </div>
+    <div class="menu-item disabled" data-action="contact">
+      <span class="arrow">▶</span>
+      <span>CONTACT</span>
+      <span class="coming-soon">SOON</span>
+    </div>
+  </div>
+  <div class="press-key">▼ CLICK TO EXPLORE ▼</div>
+</div>
+
+<!-- HUD -->
+<div id="hud">
+  <div id="loc-box" style="position:fixed">
+    <div id="loc-name">OLAN'S ROOM</div>
+    <div id="loc-sub">// click objects to interact</div>
+  </div>
+  <div id="hint-bar" style="position:fixed">
+    <span id="hint-text">[ CLICK ] interact with objects</span>
+  </div>
+  <button id="back-btn" style="position:fixed">◀ BACK</button>
+</div>
+
+<!-- MODAL -->
+<div id="modal">
+  <div id="modal-box">
+    <div id="modal-header">
+      <div id="modal-title">—</div>
+      <button id="modal-close">✕ CLOSE</button>
+    </div>
+    <div id="modal-body"></div>
+  </div>
+</div>
+
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://unpkg.com/three@0.128.0/build/three.module.js",
+    "three/addons/": "https://unpkg.com/three@0.128.0/examples/jsm/"
+  }
+}
+</script>
+
+<script type="module" src="main.js"></script>
+</body>
+</html>

@@ -1,0 +1,1187 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>OLAN.DEV — 3D World</title>
+<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323&display=swap" rel="stylesheet">
+<style>
+* { margin:0; padding:0; box-sizing:border-box; }
+
+body {
+  background: #0a0a12;
+  overflow: hidden;
+  font-family: 'Press Start 2P', monospace;
+  cursor: none;
+}
+
+#c { display:block; width:100vw; height:100vh; image-rendering: pixelated; }
+
+/* ── CUSTOM CURSOR ── */
+#cur {
+  width:14px; height:14px;
+  background: #b8ff8c;
+  position:fixed; top:0; left:0;
+  pointer-events:none; z-index:9999;
+  clip-path: polygon(0 0,65% 0,100% 35%,65% 55%,65% 100%,0 100%);
+  transition: background .1s;
+  mix-blend-mode: difference;
+}
+
+/* ── SCANLINES ── */
+#scanlines {
+  position:fixed; inset:0;
+  background: repeating-linear-gradient(
+    0deg,
+    transparent, transparent 2px,
+    rgba(0,0,0,0.12) 2px, rgba(0,0,0,0.12) 4px
+  );
+  pointer-events:none; z-index:800;
+}
+
+/* ── DITHER VIGNETTE ── */
+#vignette {
+  position:fixed; inset:0;
+  background: radial-gradient(ellipse at center,
+    transparent 40%, rgba(0,0,0,0.6) 100%);
+  pointer-events:none; z-index:801;
+}
+
+/* ── MAIN MENU ── */
+#menu {
+  position:fixed; inset:0;
+  display:flex; flex-direction:column;
+  align-items:center; justify-content:center;
+  z-index:600;
+  transition: opacity .8s, transform .8s;
+}
+
+.menu-title {
+  font-size: clamp(28px,5vw,52px);
+  color: #b8ff8c;
+  text-shadow:
+    4px 4px 0 #1a3d0a,
+    0 0 40px #b8ff8c,
+    0 0 80px rgba(184,255,140,0.3);
+  letter-spacing: 6px;
+  margin-bottom: 8px;
+  animation: titleFloat 3s ease-in-out infinite;
+}
+@keyframes titleFloat {
+  0%,100% { transform:translateY(0); }
+  50% { transform:translateY(-6px); }
+}
+
+.menu-sub {
+  font-family: 'VT323', monospace;
+  font-size: 20px;
+  color: #7aab5a;
+  letter-spacing: 4px;
+  margin-bottom: 60px;
+}
+
+.menu-items {
+  display:flex; flex-direction:column;
+  gap: 12px; align-items:flex-start;
+  background: rgba(10,10,18,0.85);
+  border: 3px solid #2a3d1a;
+  padding: 32px 48px;
+  box-shadow:
+    0 0 0 1px #1a2d10,
+    6px 6px 0 #060609,
+    0 0 60px rgba(184,255,140,0.05);
+  position:relative;
+}
+.menu-items::before {
+  content:'';
+  position:absolute; top:-3px; left:-3px; right:-3px; bottom:-3px;
+  border: 1px solid rgba(184,255,140,0.1);
+}
+
+.menu-item {
+  font-size: 11px;
+  color: #6e8f52;
+  padding: 10px 16px;
+  cursor: none;
+  letter-spacing: 2px;
+  transition: color .1s, background .1s;
+  display:flex; align-items:center; gap:14px;
+  width:100%;
+  border: 2px solid transparent;
+  position:relative;
+}
+.menu-item .arrow { opacity:0; transition: opacity .1s; color:#b8ff8c; }
+.menu-item:hover {
+  color: #b8ff8c;
+  background: rgba(184,255,140,0.06);
+  border-color: rgba(184,255,140,0.2);
+  text-shadow: 0 0 12px #b8ff8c;
+}
+.menu-item:hover .arrow { opacity:1; }
+.menu-item:hover #cur { background:#ffdd00; }
+
+.menu-corner {
+  position:absolute;
+  font-family:'VT323',monospace;
+  font-size:14px;
+  color:#2a3d1a;
+}
+.menu-corner.tl { top:8px; left:12px; }
+.menu-corner.br { bottom:8px; right:12px; }
+
+/* press any key */
+.press-key {
+  margin-top:32px;
+  font-family:'VT323',monospace;
+  font-size:18px;
+  color:#4a6a38;
+  letter-spacing:3px;
+  animation: blink 1.4s step-end infinite;
+}
+@keyframes blink { 50%{opacity:0} }
+
+/* ── HUD (shown in world) ── */
+#hud {
+  position:fixed; z-index:700;
+  opacity:0; pointer-events:none;
+  transition:opacity .6s;
+}
+
+/* top-left location */
+#loc-box {
+  top:24px; left:24px;
+  background:rgba(10,10,18,0.9);
+  border:3px solid #2a3d1a;
+  padding:12px 20px;
+  box-shadow: 4px 4px 0 #06060a;
+}
+#loc-name {
+  font-size:9px; color:#b8ff8c;
+  text-shadow:0 0 8px #b8ff8c;
+  margin-bottom:4px;
+}
+#loc-sub { font-family:'VT323',monospace; font-size:16px; color:#6e8f52; }
+
+/* bottom hint bar */
+#hint-bar {
+  bottom:24px; left:50%;
+  transform:translateX(-50%);
+  background:rgba(10,10,18,0.9);
+  border:3px solid #2a3d1a;
+  padding:10px 24px;
+  box-shadow: 4px 4px 0 #06060a;
+  white-space:nowrap;
+}
+#hint-text { font-family:'VT323',monospace; font-size:18px; color:#7aab5a; letter-spacing:2px; }
+
+/* back button */
+#back-btn {
+  top:24px; right:24px;
+  background:rgba(10,10,18,0.9);
+  border:3px solid #2a3d1a;
+  padding:10px 20px;
+  font-size:8px; color:#6e8f52;
+  cursor:none;
+  box-shadow: 4px 4px 0 #06060a;
+  transition:color .1s,border-color .1s;
+  display:none;
+}
+#back-btn:hover { color:#b8ff8c; border-color:#b8ff8c; }
+
+/* ── MODAL PANEL ── */
+#modal {
+  position:fixed; inset:0;
+  z-index:750;
+  display:flex; align-items:center; justify-content:center;
+  background:rgba(0,0,0,0.7);
+  opacity:0; pointer-events:none;
+  transition:opacity .4s;
+}
+#modal.open { opacity:1; pointer-events:all; }
+
+#modal-box {
+  background:#0d0d18;
+  border:4px solid #b8ff8c;
+  box-shadow:
+    8px 8px 0 #060609,
+    0 0 60px rgba(184,255,140,0.15);
+  padding:0;
+  max-width:640px; width:90%;
+  max-height:80vh;
+  overflow:hidden;
+  transform:translateY(20px);
+  transition:transform .4s;
+  display:flex; flex-direction:column;
+}
+#modal.open #modal-box { transform:translateY(0); }
+
+#modal-header {
+  background:#131322;
+  border-bottom:4px solid #2a3d1a;
+  padding:16px 24px;
+  display:flex; justify-content:space-between; align-items:center;
+}
+#modal-title { font-size:10px; color:#b8ff8c; text-shadow:0 0 8px #b8ff8c; }
+#modal-close {
+  font-size:12px; color:#6e8f52; cursor:none;
+  transition:color .1s;
+  background:none; border:none; font-family:inherit;
+}
+#modal-close:hover { color:#ff6b8a; }
+
+#modal-body {
+  padding:28px;
+  overflow-y:auto;
+  flex:1;
+}
+#modal-body::-webkit-scrollbar { width:8px; }
+#modal-body::-webkit-scrollbar-track { background:#0a0a12; }
+#modal-body::-webkit-scrollbar-thumb { background:#2a3d1a; border:2px solid #0a0a12; }
+
+/* ── OBJECT LABEL (tooltip) ── */
+#obj-label {
+  position:fixed;
+  background:rgba(10,10,18,0.95);
+  border:2px solid #b8ff8c;
+  padding:6px 12px;
+  font-size:7px;
+  color:#b8ff8c;
+  pointer-events:none;
+  z-index:710;
+  opacity:0;
+  transition:opacity .2s;
+  box-shadow:3px 3px 0 #060609;
+  white-space:nowrap;
+}
+
+/* modal content styles */
+.proj-card {
+  background:#131322;
+  border:3px solid #1a2d10;
+  padding:20px;
+  margin-bottom:16px;
+  box-shadow:4px 4px 0 #06060a;
+  transition:border-color .15s;
+}
+.proj-card:hover { border-color:#b8ff8c; }
+.proj-tag {
+  display:inline-block;
+  font-size:6px; padding:3px 8px;
+  background:rgba(184,255,140,0.1);
+  border:2px solid #b8ff8c;
+  color:#b8ff8c; margin-bottom:10px;
+}
+.proj-name { font-size:10px; color:#e0f0d0; margin-bottom:8px; }
+.proj-desc { font-family:'VT323',monospace; font-size:17px; color:#6e8f52; line-height:1.5; }
+.proj-tech { display:flex; gap:6px; flex-wrap:wrap; margin-top:12px; }
+.tech-chip { font-size:6px; padding:3px 7px; background:#0a0a12; border:2px solid #2a3d1a; color:#7aab5a; }
+
+.contact-row {
+  display:flex; align-items:center; gap:16px;
+  padding:16px 0;
+  border-bottom:2px solid #1a2d10;
+  transition:background .1s;
+  cursor:none;
+}
+.contact-row:last-child { border-bottom:none; }
+.contact-row:hover { background:rgba(184,255,140,0.03); }
+.contact-icon { font-size:20px; width:32px; text-align:center; }
+.contact-info { flex:1; }
+.contact-label { font-size:7px; color:#6e8f52; margin-bottom:4px; }
+.contact-val { font-family:'VT323',monospace; font-size:18px; color:#b8ff8c; }
+
+.about-text { font-family:'VT323',monospace; font-size:19px; color:#8aab6a; line-height:1.8; }
+.about-text .hl { color:#b8ff8c; }
+.stat-row-m { margin:16px 0; }
+.stat-label-m { font-size:7px; color:#6e8f52; margin-bottom:6px; display:flex; justify-content:space-between; }
+.stat-bar-m { height:10px; background:#0a0a12; border:2px solid #1a2d10; }
+.stat-fill-m { height:100%; background:#b8ff8c; box-shadow:0 0 6px #b8ff8c; }
+
+/* pixel noise overlay */
+#noise {
+  position:fixed; inset:0; z-index:802;
+  pointer-events:none;
+  opacity:.025;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  background-size: 200px;
+}
+</style>
+</head>
+<body>
+
+<canvas id="c"></canvas>
+<div id="scanlines"></div>
+<div id="vignette"></div>
+<div id="noise"></div>
+<div id="cur"></div>
+<div id="obj-label"></div>
+
+<!-- MAIN MENU -->
+<div id="menu">
+  <div class="menu-title">OLAN.DEV</div>
+  <div class="menu-sub">// Portfolio v2.0 · CS @ BINUS</div>
+
+  <div class="menu-items">
+    <div class="menu-corner tl">┌─</div>
+    <div class="menu-corner br">─┘</div>
+    <div class="menu-item" data-action="enter">
+      <span class="arrow">▶</span>
+      <span>ENTER WORLD</span>
+    </div>
+    <div class="menu-item" data-action="projects">
+      <span class="arrow">▶</span>
+      <span>VIEW PROJECTS</span>
+    </div>
+    <div class="menu-item" data-action="about">
+      <span class="arrow">▶</span>
+      <span>ABOUT ME</span>
+    </div>
+    <div class="menu-item" data-action="contact">
+      <span class="arrow">▶</span>
+      <span>CONTACT</span>
+    </div>
+  </div>
+  <div class="press-key">▼ CLICK TO EXPLORE ▼</div>
+</div>
+
+<!-- HUD -->
+<div id="hud">
+  <div id="loc-box" style="position:fixed">
+    <div id="loc-name">OLAN'S ROOM</div>
+    <div id="loc-sub">// click objects to explore</div>
+  </div>
+  <div id="hint-bar" style="position:fixed">
+    <span id="hint-text">[ SCROLL ] orbit  ·  [ CLICK ] interact  ·  [ DRAG ] rotate</span>
+  </div>
+  <button id="back-btn" style="position:fixed">◀ BACK TO MENU</button>
+</div>
+
+<!-- MODAL -->
+<div id="modal">
+  <div id="modal-box">
+    <div id="modal-header">
+      <div id="modal-title">—</div>
+      <button id="modal-close">✕ CLOSE</button>
+    </div>
+    <div id="modal-body"></div>
+  </div>
+</div>
+
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.module.js"
+  }
+}
+</script>
+
+<script type="module">
+import * as THREE from 'three';
+
+// ─────────────────────────────────────────
+// SETUP
+// ─────────────────────────────────────────
+const canvas = document.getElementById('c');
+const renderer = new THREE.WebGLRenderer({ canvas, antialias: false });
+renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5));
+renderer.setSize(window.innerWidth, window.innerHeight);
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+renderer.setClearColor(0x0a0a12);
+
+const scene = new THREE.Scene();
+scene.fog = new THREE.Fog(0x0a0a12, 18, 35);
+
+const camera = new THREE.PerspectiveCamera(55, window.innerWidth/window.innerHeight, 0.1, 100);
+
+// Camera states
+const CAM_STATES = {
+  MENU: { pos: new THREE.Vector3(0, 8, 14), target: new THREE.Vector3(0, 0, 0) },
+  WORLD: { pos: new THREE.Vector3(6, 9, 10), target: new THREE.Vector3(0, 1, 0) },
+};
+camera.position.copy(CAM_STATES.MENU.pos);
+const camTarget = new THREE.Vector3();
+
+// ─────────────────────────────────────────
+// LIGHTS
+// ─────────────────────────────────────────
+const ambient = new THREE.AmbientLight(0x8aab6a, 0.4);
+scene.add(ambient);
+
+const dirLight = new THREE.DirectionalLight(0xc8ffaa, 1.2);
+dirLight.position.set(8, 14, 8);
+dirLight.castShadow = true;
+dirLight.shadow.mapSize.set(1024, 1024);
+dirLight.shadow.camera.near = 0.1;
+dirLight.shadow.camera.far = 50;
+dirLight.shadow.camera.left = -12;
+dirLight.shadow.camera.right = 12;
+dirLight.shadow.camera.top = 12;
+dirLight.shadow.camera.bottom = -12;
+scene.add(dirLight);
+
+// warm fill from right
+const fillLight = new THREE.PointLight(0xffd580, 0.5, 20);
+fillLight.position.set(-6, 6, 2);
+scene.add(fillLight);
+
+// TV glow
+const tvLight = new THREE.PointLight(0x88ccff, 1.2, 5);
+tvLight.position.set(-3, 2.5, 1.5);
+scene.add(tvLight);
+
+// desk lamp
+const lampLight = new THREE.PointLight(0xffcc66, 1.5, 6);
+lampLight.position.set(2.5, 3.5, 0.5);
+scene.add(lampLight);
+
+// ─────────────────────────────────────────
+// MATERIALS (lo-fi / toon-like)
+// ─────────────────────────────────────────
+const M = {
+  floor:   new THREE.MeshLambertMaterial({ color: 0x1a1a28 }),
+  floorLine: new THREE.MeshLambertMaterial({ color: 0x22223a }),
+  wall:    new THREE.MeshLambertMaterial({ color: 0x141420 }),
+  wallAcc: new THREE.MeshLambertMaterial({ color: 0x1e1e30 }),
+  desk:    new THREE.MeshLambertMaterial({ color: 0x3d2b1a }),
+  deskTop: new THREE.MeshLambertMaterial({ color: 0x4a3522 }),
+  tv:      new THREE.MeshLambertMaterial({ color: 0x1a1a22 }),
+  tvScreen:new THREE.MeshLambertMaterial({ color: 0x1155aa, emissive: 0x1144cc, emissiveIntensity: 0.8 }),
+  bookA:   new THREE.MeshLambertMaterial({ color: 0xaa3355 }),
+  bookB:   new THREE.MeshLambertMaterial({ color: 0x3355aa }),
+  bookC:   new THREE.MeshLambertMaterial({ color: 0x33aa55 }),
+  bookD:   new THREE.MeshLambertMaterial({ color: 0xaaaa33 }),
+  plant:   new THREE.MeshLambertMaterial({ color: 0x2d6e3a }),
+  pot:     new THREE.MeshLambertMaterial({ color: 0x8b4513 }),
+  laptop:  new THREE.MeshLambertMaterial({ color: 0x222233 }),
+  lapScreen: new THREE.MeshLambertMaterial({ color: 0x88ff88, emissive: 0x44ff44, emissiveIntensity: 0.5 }),
+  chair:   new THREE.MeshLambertMaterial({ color: 0x2a1a0a }),
+  chairCushion: new THREE.MeshLambertMaterial({ color: 0x553311 }),
+  rug:     new THREE.MeshLambertMaterial({ color: 0x2d1a3d }),
+  rugAcc:  new THREE.MeshLambertMaterial({ color: 0x4a2d5a }),
+  shelf:   new THREE.MeshLambertMaterial({ color: 0x2a1a0a }),
+  poster:  new THREE.MeshLambertMaterial({ color: 0x0a1a1a, emissive: 0x003322, emissiveIntensity: 0.3 }),
+  lamp:    new THREE.MeshLambertMaterial({ color: 0xccccaa }),
+  lampShade: new THREE.MeshLambertMaterial({ color: 0xffdd88, emissive: 0xffcc44, emissiveIntensity: 0.6 }),
+  pixel:   new THREE.MeshLambertMaterial({ color: 0xb8ff8c, emissive: 0x44aa22, emissiveIntensity: 0.4 }),
+  white:   new THREE.MeshLambertMaterial({ color: 0xeeeeee }),
+};
+
+// ─────────────────────────────────────────
+// HELPERS
+// ─────────────────────────────────────────
+function box(w,h,d, mat, x=0,y=0,z=0, castShadow=true) {
+  const m = new THREE.Mesh(new THREE.BoxGeometry(w,h,d), mat);
+  m.position.set(x,y,z);
+  if (castShadow) { m.castShadow=true; m.receiveShadow=true; }
+  scene.add(m);
+  return m;
+}
+
+// ─────────────────────────────────────────
+// ROOM GEOMETRY
+// ─────────────────────────────────────────
+
+// Floor
+const floor = box(16, 0.2, 14, M.floor, 0, -0.1, 0, false);
+floor.receiveShadow = true;
+
+// Floor grid lines (pixel grid feel)
+for (let i=-7;i<=7;i++) {
+  const l = box(16, 0.01, 0.05, M.floorLine, 0, 0.01, i, false);
+  const l2 = box(0.05, 0.01, 14, M.floorLine, i, 0.01, 0, false);
+}
+
+// Rug
+box(6, 0.05, 4, M.rug, 0.5, 0.01, 1.5, false);
+box(5.6, 0.06, 0.15, M.rugAcc, 0.5, 0.01, 3.28, false);
+box(5.6, 0.06, 0.15, M.rugAcc, 0.5, 0.01, -0.28, false);
+
+// Back wall
+box(16, 10, 0.2, M.wall, 0, 4, -7, false);
+// Side walls
+box(0.2, 10, 14, M.wall, -8, 4, 0, false);
+box(0.2, 10, 14, M.wall,  8, 4, 0, false);
+
+// Wall accent strip
+box(16, 0.15, 0.1, M.wallAcc, 0, 3.5, -6.9, false);
+
+// Ceiling
+box(16, 0.2, 14, M.wall, 0, 8, 0, false);
+
+// ─────────────────────────────────────────
+// DESK
+// ─────────────────────────────────────────
+const deskGroup = new THREE.Group();
+scene.add(deskGroup);
+
+// desk top
+const deskTop = new THREE.Mesh(new THREE.BoxGeometry(5,0.15,2), M.deskTop);
+deskTop.position.set(0, 2.5, 0.5);
+deskTop.castShadow = true; deskTop.receiveShadow = true;
+deskGroup.add(deskTop);
+
+// desk body
+const deskBody = new THREE.Mesh(new THREE.BoxGeometry(5,2.3,1.8), M.desk);
+deskBody.position.set(0, 1.25, 0.5);
+deskBody.castShadow = true; deskBody.receiveShadow = true;
+deskGroup.add(deskBody);
+
+// drawer detail
+const drawer = new THREE.Mesh(new THREE.BoxGeometry(1.4,0.5,0.05), M.deskTop);
+drawer.position.set(1.5, 1.6, 1.41);
+deskGroup.add(drawer);
+const drawerKnob = new THREE.Mesh(new THREE.BoxGeometry(0.15,0.15,0.1), M.lamp);
+drawerKnob.position.set(1.5, 1.6, 1.47);
+deskGroup.add(drawerKnob);
+
+// ─────────────────────────────────────────
+// LAPTOP (on desk) — CLICKABLE
+// ─────────────────────────────────────────
+const laptopGroup = new THREE.Group();
+laptopGroup.position.set(2.5, 2.58, 0.3);
+scene.add(laptopGroup);
+
+const lapBase = new THREE.Mesh(new THREE.BoxGeometry(1.4, 0.06, 1), M.laptop);
+lapBase.castShadow = true;
+laptopGroup.add(lapBase);
+
+const lapLid = new THREE.Mesh(new THREE.BoxGeometry(1.4, 0.9, 0.05), M.laptop);
+lapLid.position.set(0, 0.45, -0.5);
+lapLid.rotation.x = -0.4;
+lapLid.castShadow = true;
+laptopGroup.add(lapLid);
+
+const lapScreen = new THREE.Mesh(new THREE.BoxGeometry(1.3, 0.8, 0.01), M.lapScreen);
+lapScreen.position.set(0, 0.45+0.01, -0.49);
+lapScreen.rotation.x = -0.4;
+laptopGroup.add(lapScreen);
+
+laptopGroup.userData = { clickable: true, id: 'laptop', label: '💻 LAPTOP — ABOUT ME' };
+
+// ─────────────────────────────────────────
+// DESK LAMP
+// ─────────────────────────────────────────
+const lampG = new THREE.Group();
+lampG.position.set(-1.8, 2.58, 0.2);
+scene.add(lampG);
+
+const lampBase = new THREE.Mesh(new THREE.CylinderGeometry(0.18,0.22,0.08,8), M.lamp);
+lampG.add(lampBase);
+const lampPole = new THREE.Mesh(new THREE.CylinderGeometry(0.04,0.04,1.2,6), M.lamp);
+lampPole.position.set(0, 0.64, 0);
+lampG.add(lampPole);
+const lampHead = new THREE.Mesh(new THREE.CylinderGeometry(0.28,0.18,0.25,8), M.lampShade);
+lampHead.position.set(0, 1.28, 0);
+lampG.add(lampHead);
+
+// ─────────────────────────────────────────
+// TV — CLICKABLE
+// ─────────────────────────────────────────
+const tvGroup = new THREE.Group();
+tvGroup.position.set(-3, 2.8, -6.5);
+scene.add(tvGroup);
+
+const tvBody = new THREE.Mesh(new THREE.BoxGeometry(4, 2.4, 0.2), M.tv);
+tvBody.castShadow = true;
+tvGroup.add(tvBody);
+
+const tvScreen = new THREE.Mesh(new THREE.BoxGeometry(3.7, 2.1, 0.05), M.tvScreen);
+tvScreen.position.set(0, 0, 0.13);
+tvGroup.add(tvScreen);
+
+// TV scanline detail (small boxes on screen)
+for(let row=0; row<3; row++) {
+  for(let col=0; col<5; col++) {
+    const pixel = new THREE.Mesh(
+      new THREE.BoxGeometry(0.55, 0.45, 0.02),
+      new THREE.MeshLambertMaterial({
+        color: [0x2255bb, 0x3366cc, 0x1144aa, 0x4477dd, 0x2266bb][col % 5],
+        emissive: 0x1133aa, emissiveIntensity: 0.4
+      })
+    );
+    pixel.position.set(-1.1 + col*0.58, 0.65 - row*0.6, 0.16);
+    tvGroup.add(pixel);
+  }
+}
+
+const tvStand = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.6, 0.3), M.tv);
+tvStand.position.set(0, -1.5, 0);
+tvGroup.add(tvStand);
+const tvBase = new THREE.Mesh(new THREE.BoxGeometry(1.4, 0.1, 0.4), M.tv);
+tvBase.position.set(0, -1.85, 0);
+tvGroup.add(tvBase);
+
+tvGroup.userData = { clickable: true, id: 'tv', label: '📺 TV — PROJECTS' };
+
+// ─────────────────────────────────────────
+// BOOKSHELF — CLICKABLE
+// ─────────────────────────────────────────
+const shelfGroup = new THREE.Group();
+shelfGroup.position.set(6.5, 0, -4);
+scene.add(shelfGroup);
+
+// frame
+const shelfBack = new THREE.Mesh(new THREE.BoxGeometry(2.8, 5, 0.1), M.shelf);
+shelfBack.position.set(0, 2.5, -0.5);
+shelfBack.castShadow = true;
+shelfGroup.add(shelfBack);
+
+const shelfSideL = new THREE.Mesh(new THREE.BoxGeometry(0.1, 5, 1), M.shelf);
+shelfSideL.position.set(-1.4, 2.5, 0);
+shelfGroup.add(shelfSideL);
+
+const shelfSideR = new THREE.Mesh(new THREE.BoxGeometry(0.1, 5, 1), M.shelf);
+shelfSideR.position.set(1.4, 2.5, 0);
+shelfGroup.add(shelfSideR);
+
+// shelves
+[0.8, 1.9, 3.0, 4.1].forEach(y => {
+  const s = new THREE.Mesh(new THREE.BoxGeometry(2.8, 0.1, 1), M.shelf);
+  s.position.set(0, y, 0);
+  shelfGroup.add(s);
+});
+
+// books
+const bookColors = [M.bookA,M.bookB,M.bookC,M.bookD];
+const bookW = [0.2,0.25,0.18,0.22,0.2,0.24,0.19,0.23];
+[1.05, 2.15, 3.25].forEach((y,ri) => {
+  let x = -1.1;
+  bookW.forEach((w,bi) => {
+    const bk = new THREE.Mesh(
+      new THREE.BoxGeometry(w, 0.7+Math.random()*0.3, 0.7),
+      bookColors[(ri+bi)%4]
+    );
+    bk.position.set(x + w/2, y, -0.1);
+    bk.castShadow = true;
+    shelfGroup.add(bk);
+    x += w + 0.02;
+    if(x > 1.1) return;
+  });
+});
+
+shelfGroup.userData = { clickable: true, id: 'shelf', label: '📚 BOOKSHELF — SKILLS' };
+
+// ─────────────────────────────────────────
+// PLANT
+// ─────────────────────────────────────────
+const plantG = new THREE.Group();
+plantG.position.set(-6.5, 0, -5.5);
+scene.add(plantG);
+
+const pot = new THREE.Mesh(new THREE.CylinderGeometry(0.4,0.3,0.6,8), M.pot);
+pot.position.y = 0.3;
+plantG.add(pot);
+const soil = new THREE.Mesh(new THREE.CylinderGeometry(0.38,0.38,0.05,8), M.wall);
+soil.position.y = 0.63;
+plantG.add(soil);
+
+// leaves
+[[0,1.1,0],[0.3,0.9,0.1],[-0.3,0.9,-0.1],[0.1,1.3,0.2],[-0.2,1.2,-0.2]].forEach(([x,y,z]) => {
+  const leaf = new THREE.Mesh(
+    new THREE.SphereGeometry(0.28+Math.random()*0.1,5,5),
+    new THREE.MeshLambertMaterial({ color: 0x1a5c28+Math.floor(Math.random()*0x101010) })
+  );
+  leaf.position.set(x,y,z);
+  leaf.scale.set(1,1.3,1);
+  leaf.castShadow = true;
+  plantG.add(leaf);
+});
+
+// ─────────────────────────────────────────
+// POSTER on wall — CLICKABLE (contact)
+// ─────────────────────────────────────────
+const posterGroup = new THREE.Group();
+posterGroup.position.set(3, 4.5, -6.85);
+scene.add(posterGroup);
+
+const posterBg = new THREE.Mesh(new THREE.BoxGeometry(2, 2.8, 0.05), M.poster);
+posterBg.castShadow = false;
+posterGroup.add(posterBg);
+
+// pixel art on poster (grid of colored boxes)
+const posterColors = [
+  0xb8ff8c, 0x88ccff, 0xff88aa, 0xffdd66,
+  0x88ffcc, 0xff88cc, 0x88aaff, 0xb8ff8c
+];
+for(let r=0;r<4;r++) for(let c=0;c<4;c++) {
+  const dot = new THREE.Mesh(
+    new THREE.BoxGeometry(0.3,0.3,0.04),
+    new THREE.MeshLambertMaterial({
+      color: posterColors[(r*4+c)%8],
+      emissive: posterColors[(r*4+c)%8],
+      emissiveIntensity: 0.3
+    })
+  );
+  dot.position.set(-0.6+c*0.4, 0.5-r*0.4+0.6, 0.04);
+  posterGroup.add(dot);
+}
+
+const frame = new THREE.Mesh(
+  new THREE.BoxGeometry(2.2,3,0.04),
+  new THREE.MeshLambertMaterial({ color: 0x2a1a0a })
+);
+frame.position.z = -0.04;
+posterGroup.add(frame);
+
+posterGroup.userData = { clickable: true, id: 'poster', label: '🎨 POSTER — CONTACT' };
+
+// ─────────────────────────────────────────
+// CHAIR
+// ─────────────────────────────────────────
+const chairG = new THREE.Group();
+chairG.position.set(2.5, 0, 2.5);
+scene.add(chairG);
+
+// seat
+const seat = new THREE.Mesh(new THREE.BoxGeometry(1.2,0.12,1.2), M.chairCushion);
+seat.position.y = 1.1;
+seat.castShadow = true;
+chairG.add(seat);
+
+// back
+const back = new THREE.Mesh(new THREE.BoxGeometry(1.2,1.2,0.12), M.chair);
+back.position.set(0, 1.76, -0.54);
+back.castShadow = true;
+chairG.add(back);
+
+// legs
+[[-0.5,0.55,0.5],[0.5,0.55,0.5],[-0.5,0.55,-0.5],[0.5,0.55,-0.5]].forEach(([x,y,z]) => {
+  const leg = new THREE.Mesh(new THREE.BoxGeometry(0.1,1.1,0.1), M.chair);
+  leg.position.set(x,y,z);
+  chairG.add(leg);
+});
+
+// ─────────────────────────────────────────
+// FLOATING PIXEL PARTICLES
+// ─────────────────────────────────────────
+const particles = [];
+for(let i=0;i<60;i++){
+  const p = new THREE.Mesh(
+    new THREE.BoxGeometry(0.06,0.06,0.06),
+    new THREE.MeshBasicMaterial({
+      color: [0xb8ff8c,0x88ccff,0xffdd66,0xff88aa][Math.floor(Math.random()*4)],
+      transparent:true, opacity:0.6
+    })
+  );
+  p.position.set(
+    (Math.random()-0.5)*14,
+    Math.random()*6 + 0.5,
+    (Math.random()-0.5)*12
+  );
+  p.userData.vy = (Math.random()-0.5)*0.003;
+  p.userData.vx = (Math.random()-0.5)*0.002;
+  p.userData.phase = Math.random()*Math.PI*2;
+  scene.add(p);
+  particles.push(p);
+}
+
+// ─────────────────────────────────────────
+// RAYCASTING / INTERACTION
+// ─────────────────────────────────────────
+const raycaster = new THREE.Raycaster();
+const mouse = new THREE.Vector2();
+const clickables = [tvGroup, laptopGroup, shelfGroup, posterGroup];
+
+let hoveredObj = null;
+const label = document.getElementById('obj-label');
+
+function getClickable(obj) {
+  let o = obj;
+  while(o) {
+    if(o.userData && o.userData.clickable) return o;
+    o = o.parent;
+  }
+  return null;
+}
+
+// ─────────────────────────────────────────
+// CAMERA ANIMATION
+// ─────────────────────────────────────────
+let inWorld = false;
+let camAnimating = false;
+let camDestPos = new THREE.Vector3();
+let camDestTarget = new THREE.Vector3();
+let camT = 0;
+let camStartPos = new THREE.Vector3();
+let camStartTarget = new THREE.Vector3();
+
+function flyTo(pos, target, duration=2.2, onDone=null) {
+  camStartPos.copy(camera.position);
+  camStartTarget.copy(camTarget);
+  camDestPos.copy(pos);
+  camDestTarget.copy(target);
+  camT = 0;
+  camAnimating = true;
+  camDuration = duration;
+  camOnDone = onDone;
+}
+
+let camDuration = 2.2;
+let camOnDone = null;
+
+// orbit state
+let isDragging = false;
+let prevMouse = {x:0,y:0};
+let orbitTheta = 0.6;
+let orbitPhi = 0.5;
+let orbitRadius = 14;
+let orbitTarget = new THREE.Vector3(0,1,0);
+
+function updateOrbitCamera() {
+  const x = orbitTarget.x + orbitRadius * Math.sin(orbitPhi) * Math.sin(orbitTheta);
+  const y = orbitTarget.y + orbitRadius * Math.cos(orbitPhi);
+  const z = orbitTarget.z + orbitRadius * Math.sin(orbitPhi) * Math.cos(orbitTheta);
+  camera.position.set(x,y,z);
+  camera.lookAt(orbitTarget);
+}
+
+// ─────────────────────────────────────────
+// UI STATE
+// ─────────────────────────────────────────
+const menuEl = document.getElementById('menu');
+const hudEl  = document.getElementById('hud');
+const hud_loc = document.getElementById('loc-box');
+const hud_hint= document.getElementById('hint-bar');
+const backBtn= document.getElementById('back-btn');
+const modal  = document.getElementById('modal');
+const modalTitle = document.getElementById('modal-title');
+const modalBody  = document.getElementById('modal-body');
+
+function showWorld() {
+  inWorld = true;
+  menuEl.style.opacity = '0';
+  menuEl.style.transform = 'scale(0.95)';
+  setTimeout(()=>{ menuEl.style.pointerEvents='none'; }, 700);
+
+  flyTo(
+    CAM_STATES.WORLD.pos,
+    CAM_STATES.WORLD.target,
+    2.2,
+    () => {
+      hudEl.style.opacity = '1';
+      hud_loc.style.display = 'block';
+      hud_hint.style.display = 'block';
+      backBtn.style.display = 'block';
+      // switch to orbit
+      orbitTheta = 0.6; orbitPhi = 1.0; orbitRadius = 14;
+      orbitTarget.set(0,1,0);
+    }
+  );
+}
+
+function showMenu() {
+  inWorld = false;
+  hudEl.style.opacity = '0';
+  backBtn.style.display = 'none';
+  flyTo(CAM_STATES.MENU.pos, new THREE.Vector3(0,0,0), 1.8, () => {
+    menuEl.style.opacity='1';
+    menuEl.style.transform='';
+    menuEl.style.pointerEvents='';
+  });
+}
+
+function openModal(id) {
+  const contents = {
+    tv: {
+      title: '📺 PROJECTS',
+      html: `
+        <div class="proj-card">
+          <div class="proj-tag">COMPLETED</div>
+          <div class="proj-name">YT DOWNLOADER</div>
+          <div class="proj-desc">Flask web app untuk download YouTube videos via WiFi. Accessible dari semua device di network yang sama. Built with yt-dlp backend.</div>
+          <div class="proj-tech">
+            <span class="tech-chip">PYTHON</span>
+            <span class="tech-chip">FLASK</span>
+            <span class="tech-chip">YT-DLP</span>
+            <span class="tech-chip">HTML/CSS</span>
+          </div>
+        </div>
+        <div class="proj-card">
+          <div class="proj-tag" style="border-color:#88ccff;color:#88ccff;background:rgba(136,204,255,0.1)">IN PROGRESS</div>
+          <div class="proj-name">ATS + AI CV SUMMARIZER</div>
+          <div class="proj-desc">Applicant Tracking System dengan AI-powered CV summarization menggunakan Claude API. Full stack: React frontend, FastAPI backend, SQLite DB.</div>
+          <div class="proj-tech">
+            <span class="tech-chip">REACT</span>
+            <span class="tech-chip">FASTAPI</span>
+            <span class="tech-chip">SQLITE</span>
+            <span class="tech-chip">CLAUDE API</span>
+          </div>
+        </div>
+        <div class="proj-card">
+          <div class="proj-tag" style="border-color:#aa88ff;color:#aa88ff;background:rgba(170,136,255,0.1)">LEARNING</div>
+          <div class="proj-name">NESTJS REST API</div>
+          <div class="proj-desc">Exploring TypeScript + NestJS untuk project requirement. Belajar REST API patterns, controllers, services, dan dependency injection.</div>
+          <div class="proj-tech">
+            <span class="tech-chip">TYPESCRIPT</span>
+            <span class="tech-chip">NESTJS</span>
+            <span class="tech-chip">REST API</span>
+          </div>
+        </div>`
+    },
+    laptop: {
+      title: '💻 ABOUT ME',
+      html: `
+        <div class="about-text">
+          <span class="hl">Hey!</span> Gw Olan, CS student semester 4 di <span class="hl">BINUS University</span>.<br><br>
+          Lagi fokus ngebangun skill di <span class="hl">full-stack web dev</span> — bridging the gap antara teori akademik sama practical development.<br><br>
+          Suka bikin hal-hal yang actually useful, dari tools buat keluarga sampai AI-powered apps.
+        </div>
+        <div style="margin-top:24px">
+          <div class="stat-row-m">
+            <div class="stat-label-m"><span>PYTHON</span><span>85/100</span></div>
+            <div class="stat-bar-m"><div class="stat-fill-m" style="width:85%"></div></div>
+          </div>
+          <div class="stat-row-m">
+            <div class="stat-label-m"><span>REACT</span><span>72/100</span></div>
+            <div class="stat-bar-m"><div class="stat-fill-m" style="width:72%;background:#88ccff;box-shadow:0 0 6px #88ccff"></div></div>
+          </div>
+          <div class="stat-row-m">
+            <div class="stat-label-m"><span>TYPESCRIPT</span><span>55/100</span></div>
+            <div class="stat-bar-m"><div class="stat-fill-m" style="width:55%;background:#ffdd66;box-shadow:0 0 6px #ffdd66"></div></div>
+          </div>
+          <div class="stat-row-m">
+            <div class="stat-label-m"><span>ALGORITHMS</span><span>78/100</span></div>
+            <div class="stat-bar-m"><div class="stat-fill-m" style="width:78%;background:#aa88ff;box-shadow:0 0 6px #aa88ff"></div></div>
+          </div>
+        </div>`
+    },
+    shelf: {
+      title: '📚 SKILL TREE',
+      html: `
+        <div class="about-text" style="margin-bottom:20px">
+          Coursework @ BINUS: <span class="hl">Algorithms · Data Structures · Machine Learning · Databases · Networking · OOP</span>
+        </div>
+        ${[
+          ['PYTHON','#b8ff8c',85],['REACT','#88ccff',72],['TYPESCRIPT','#ffdd66',55],
+          ['FASTAPI','#88ffcc',60],['ALGORITHMS','#aa88ff',78],['DATABASES','#88ccff',65],
+          ['MACHINE LEARNING','#ffaa66',45],['NETWORKING','#ff88aa',50],['NESTJS','#ffdd66',30]
+        ].map(([n,c,v])=>`
+          <div class="stat-row-m">
+            <div class="stat-label-m"><span>${n}</span><span style="color:${c}">${v}/100</span></div>
+            <div class="stat-bar-m"><div class="stat-fill-m" style="width:${v}%;background:${c};box-shadow:0 0 6px ${c}"></div></div>
+          </div>
+        `).join('')}`
+    },
+    poster: {
+      title: '🎨 CONTACT',
+      html: `
+        <div class="contact-row">
+          <div class="contact-icon">📧</div>
+          <div class="contact-info">
+            <div class="contact-label">EMAIL</div>
+            <div class="contact-val">olan@example.com</div>
+          </div>
+        </div>
+        <div class="contact-row">
+          <div class="contact-icon">🐙</div>
+          <div class="contact-info">
+            <div class="contact-label">GITHUB</div>
+            <div class="contact-val">github.com/olan</div>
+          </div>
+        </div>
+        <div class="contact-row">
+          <div class="contact-icon">💼</div>
+          <div class="contact-info">
+            <div class="contact-label">LINKEDIN</div>
+            <div class="contact-val">linkedin.com/in/olan</div>
+          </div>
+        </div>
+        <div class="contact-row">
+          <div class="contact-icon">🎮</div>
+          <div class="contact-info">
+            <div class="contact-label">DISCORD</div>
+            <div class="contact-val">olan#0000</div>
+          </div>
+        </div>
+        <div style="margin-top:20px;padding:16px;background:#131322;border:2px solid #1a2d10">
+          <div class="about-text" style="font-size:17px">
+            Open for <span class="hl">freelance projects</span>, <span class="hl">collaborations</span>, dan <span class="hl">internship opportunities</span>. 
+            Feel free to reach out!
+          </div>
+        </div>`
+    }
+  };
+
+  const c = contents[id];
+  if(!c) return;
+  modalTitle.textContent = c.title;
+  modalBody.innerHTML = c.html;
+  modal.classList.add('open');
+}
+
+// ─────────────────────────────────────────
+// EVENTS
+// ─────────────────────────────────────────
+const cur = document.getElementById('cur');
+document.addEventListener('mousemove', e => {
+  cur.style.left = e.clientX - 7 + 'px';
+  cur.style.top  = e.clientY - 7 + 'px';
+  mouse.x = (e.clientX / window.innerWidth)  * 2 - 1;
+  mouse.y = -(e.clientY / window.innerHeight) * 2 + 1;
+
+  label.style.left = e.clientX + 18 + 'px';
+  label.style.top  = e.clientY - 10 + 'px';
+
+  if(isDragging && inWorld && !camAnimating) {
+    const dx = e.clientX - prevMouse.x;
+    const dy = e.clientY - prevMouse.y;
+    orbitTheta -= dx * 0.008;
+    orbitPhi   = Math.max(0.2, Math.min(1.5, orbitPhi + dy * 0.006));
+    prevMouse = {x:e.clientX, y:e.clientY};
+    updateOrbitCamera();
+  }
+});
+
+document.addEventListener('mousedown', e => {
+  isDragging = true;
+  prevMouse = {x:e.clientX, y:e.clientY};
+});
+document.addEventListener('mouseup', () => { isDragging = false; });
+
+document.addEventListener('wheel', e => {
+  if(!inWorld) return;
+  orbitRadius = Math.max(6, Math.min(20, orbitRadius + e.deltaY * 0.02));
+  updateOrbitCamera();
+});
+
+// Menu item clicks
+document.querySelectorAll('.menu-item').forEach(item => {
+  item.addEventListener('click', () => {
+    const action = item.dataset.action;
+    if(action === 'enter') { showWorld(); return; }
+    openModal(action === 'projects' ? 'tv' : action === 'about' ? 'laptop' : 'poster');
+  });
+  item.addEventListener('mouseenter', () => cur.style.background = '#ffdd00');
+  item.addEventListener('mouseleave', () => cur.style.background = '#b8ff8c');
+});
+
+backBtn.addEventListener('click', showMenu);
+backBtn.addEventListener('mouseenter', () => cur.style.background = '#ff88aa');
+backBtn.addEventListener('mouseleave', () => cur.style.background = '#b8ff8c');
+
+document.getElementById('modal-close').addEventListener('click', () => {
+  modal.classList.remove('open');
+});
+modal.addEventListener('click', e => {
+  if(e.target === modal) modal.classList.remove('open');
+});
+
+// World clicks
+canvas.addEventListener('click', e => {
+  if(!inWorld || camAnimating) return;
+  raycaster.setFromCamera(mouse, camera);
+  const hits = raycaster.intersectObjects(
+    clickables.flatMap(g => {
+      const arr = [g];
+      g.traverse(c => { if(c !== g) arr.push(c); });
+      return arr;
+    })
+  );
+  if(hits.length > 0) {
+    const obj = getClickable(hits[0].object);
+    if(obj) openModal(obj.userData.id);
+  }
+});
+
+// ─────────────────────────────────────────
+// EASING
+// ─────────────────────────────────────────
+function easeInOutCubic(t) {
+  return t < 0.5 ? 4*t*t*t : 1 - Math.pow(-2*t+2,3)/2;
+}
+
+// ─────────────────────────────────────────
+// ANIMATE
+// ─────────────────────────────────────────
+const clock = new THREE.Clock();
+
+function animate() {
+  requestAnimationFrame(animate);
+  const dt = clock.getDelta();
+  const t  = clock.getElapsedTime();
+
+  // particle float
+  particles.forEach(p => {
+    p.position.y += Math.sin(t*0.8 + p.userData.phase) * 0.003;
+    p.position.x += Math.sin(t*0.5 + p.userData.phase) * 0.001;
+    if(p.position.y > 7) p.position.y = 0.3;
+    if(p.position.y < 0.1) p.position.y = 6.8;
+    p.rotation.x += 0.01;
+    p.rotation.y += 0.015;
+  });
+
+  // TV light flicker
+  tvLight.intensity = 1.0 + Math.sin(t * 7.3) * 0.15 + Math.sin(t * 13.1) * 0.05;
+
+  // lamp pulse
+  lampLight.intensity = 1.3 + Math.sin(t * 2.1) * 0.15;
+
+  // camera animation (fly-through)
+  if(camAnimating) {
+    camT += dt / camDuration;
+    const et = easeInOutCubic(Math.min(camT, 1));
+    camera.position.lerpVectors(camStartPos, camDestPos, et);
+    camTarget.lerpVectors(camStartTarget, camDestTarget, et);
+    camera.lookAt(camTarget);
+
+    if(camT >= 1) {
+      camAnimating = false;
+      if(camOnDone) { camOnDone(); camOnDone = null; }
+    }
+  }
+
+  // menu camera gentle float
+  if(!inWorld && !camAnimating) {
+    camera.position.x = CAM_STATES.MENU.pos.x + Math.sin(t*0.4)*0.3;
+    camera.position.y = CAM_STATES.MENU.pos.y + Math.sin(t*0.3)*0.2;
+    camera.lookAt(0,0,0);
+  }
+
+  // hover detection
+  if(inWorld && !camAnimating) {
+    raycaster.setFromCamera(mouse, camera);
+    const allObjs = clickables.flatMap(g => {
+      const arr = [g];
+      g.traverse(c => { if(c !== g) arr.push(c); });
+      return arr;
+    });
+    const hits = raycaster.intersectObjects(allObjs);
+    if(hits.length > 0) {
+      const obj = getClickable(hits[0].object);
+      if(obj && obj !== hoveredObj) {
+        hoveredObj = obj;
+        label.textContent = obj.userData.label;
+        label.style.opacity = '1';
+        cur.style.background = '#ffdd00';
+        canvas.style.cursor = 'none';
+      }
+    } else {
+      if(hoveredObj) {
+        hoveredObj = null;
+        label.style.opacity = '0';
+        cur.style.background = '#b8ff8c';
+      }
+    }
+  }
+
+  renderer.render(scene, camera);
+}
+
+animate();
+
+// init cam look
+camera.lookAt(0,0,0);
+
+// resize
+window.addEventListener('resize', () => {
+  camera.aspect = window.innerWidth / window.innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(window.innerWidth, window.innerHeight);
+});
+
+// init orbit pos
+updateOrbitCamera();
+</script>
+</body>
+</html>
