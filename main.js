@@ -92,7 +92,7 @@ const M = {
   pianoKeyWhite: new THREE.MeshLambertMaterial({ color: 0xf4f1e8 }),
   pianoKeyBlack: new THREE.MeshLambertMaterial({ color: 0x050505 }),
   windowFrame: new THREE.MeshLambertMaterial({ color: 0xd0c8b8 }),
-  windowGlass: new THREE.MeshLambertMaterial({ color: 0x88bbdd, transparent: true, opacity: 0.3 }),
+  windowGlass: new THREE.MeshLambertMaterial({ color: 0x73b7f2, transparent: true, opacity: 0.42, emissive: 0x1d5f9f, emissiveIntensity: 0.12 }),
 };
 
 function box(w,h,d, mat, x=0,y=0,z=0, castShadow=true) {
@@ -636,6 +636,17 @@ const bgMusic = new Audio('sound/BGMusic.mp3');
 bgMusic.loop = true;
 bgMusic.volume = 0.14;
 
+const lampOnSfx = new Audio('sound/LampTurningOn.mp3');
+const lampOffSfx = new Audio('sound/LampTurningOff.mp3');
+lampOnSfx.volume = 0.28;
+lampOffSfx.volume = 0.28;
+
+function playLampSfx(isOn) {
+  const sfx = isOn ? lampOnSfx : lampOffSfx;
+  sfx.currentTime = 0;
+  sfx.play().catch(() => {});
+}
+
 function startBgMusic() {
   bgMusic.play().catch(() => {
     const retryBgMusic = () => {
@@ -867,16 +878,7 @@ function showMenu() {
 
 function showLaptopView() {
   currentState = 'LAPTOP';
-  charAtDesk = true;
-  setCharacterMoving(false);
-  // Sit at chair (adjusted for 1.6x scale)
-  characterGroup.position.set(0, 0, 3);
-  characterGroup.rotation.y = Math.PI;
-  // Reset limb rotations for sitting
-  armLUpper.rotation.x = -0.6; armRUpper.rotation.x = -0.6;
-  armLLower.rotation.x = 0; armRLower.rotation.x = 0;
-  legLUpper.rotation.x = -1.4; legRUpper.rotation.x = -1.4;
-  legLLower.rotation.x = 0; legRLower.rotation.x = 0;
+  charAtDesk = false;
   flyTo(CAM_STATES.LAPTOP.pos, CAM_STATES.LAPTOP.target, 2.0, () => {
     openProjectModal();
   });
@@ -999,6 +1001,7 @@ canvas.addEventListener('click', () => {
     if(obj && obj.userData.id === 'laptop') { showLaptopView(); }
     else if(obj && obj.userData.id === 'lamp') {
       obj.userData.on = !obj.userData.on;
+      playLampSfx(obj.userData.on);
       
       // Update label immediately
       label.textContent = obj.userData.on ? '\uD83D\uDCA1 TURN OFF LAMP' : '\uD83D\uDCA1 TURN ON LAMP';
