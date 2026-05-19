@@ -22,6 +22,7 @@ const CAM_STATES = {
   MENU:   { pos: new THREE.Vector3(0, 3.5, 12), target: new THREE.Vector3(0, 3.5, -2) },
   ROOM:   { pos: new THREE.Vector3(0, 3.5, 12), target: new THREE.Vector3(0, 3.5, -2) },
   LAPTOP: { pos: new THREE.Vector3(2.5, 5.5, 4), target: new THREE.Vector3(0.8, 2.5, 0.3) },
+  PLANT:  { pos: new THREE.Vector3(-3.5, 4.5, 0), target: new THREE.Vector3(-5.8, 3.0, -4) },
 };
 camera.position.copy(CAM_STATES.MENU.pos);
 const camTarget = new THREE.Vector3().copy(CAM_STATES.MENU.target);
@@ -627,9 +628,44 @@ catGroup.userData = { clickable: true, id: 'cat', label: '\uD83D\uDC31 SLEEPING 
 const catAudioListener = new THREE.AudioListener();
 camera.add(catAudioListener);
 const catSound = new THREE.Audio(catAudioListener);
-new THREE.AudioLoader().load('sound/CatMeow.mp3', function(buffer) {
+const bushSound = new THREE.Audio(catAudioListener);
+const bushRevSound = new THREE.Audio(catAudioListener);
+const clickSound = new THREE.Audio(catAudioListener);
+const kbSound = new THREE.Audio(catAudioListener);
+const screenUpSound = new THREE.Audio(catAudioListener);
+const screenOffSound = new THREE.Audio(catAudioListener);
+const audioLoader = new THREE.AudioLoader();
+audioLoader.load('sound/CatMeow.mp3', function(buffer) {
   catSound.setBuffer(buffer);
   catSound.setVolume(1.0);
+});
+audioLoader.load('sound/click.mp3', function(buffer) {
+  clickSound.setBuffer(buffer);
+  clickSound.setVolume(0.5);
+});
+audioLoader.load('sound/BushSound.mp3', function(buffer) {
+  bushSound.setBuffer(buffer);
+  bushSound.setVolume(0.6);
+  
+  const ctx = THREE.AudioContext.getContext();
+  const revBuffer = ctx.createBuffer(buffer.numberOfChannels, buffer.length, buffer.sampleRate);
+  for(let i=0; i<buffer.numberOfChannels; i++) {
+    revBuffer.getChannelData(i).set(buffer.getChannelData(i).slice().reverse());
+  }
+  bushRevSound.setBuffer(revBuffer);
+  bushRevSound.setVolume(0.6);
+});
+audioLoader.load('sound/keyboardClicking.mp3', function(buffer) {
+  kbSound.setBuffer(buffer);
+  kbSound.setVolume(1.0);
+});
+audioLoader.load('sound/ScreenShowingUp.mp3', function(buffer) {
+  screenUpSound.setBuffer(buffer);
+  screenUpSound.setVolume(1.0);
+});
+audioLoader.load('sound/ScreenShowingOff.mp3', function(buffer) {
+  screenOffSound.setBuffer(buffer);
+  screenOffSound.setVolume(1.0);
 });
 
 const bgMusic = new Audio('sound/BGMusic.mp3');
@@ -730,20 +766,17 @@ gltfLoader.load('model/Character.glb', gltf => {
 });
 
 // ── WAYPOINT WALK SYSTEM ──
-// Walk path: start(front-left) -> poster(left wall) -> bookshelf(right) -> back
+// Walk path: start(front-left) -> poster(left wall) -> bookshelf(right) -> window(right) -> back via front
 const WAYPOINTS = [
-  { x: -5, z: 3, pause: 1 },         // start
-  { x: -5.5, z: 1, pause: 0 },       // pass inside the left floor lamp
-  { x: -6.5, z: -2, pause: 3.5 },    // stop at One Piece poster
-  { x: -4, z: -2.5, pause: 0 },      // walk behind desk
-  { x: 4, z: -2.5, pause: 0 },       // cross behind desk
-  { x: 5, z: -3.5, pause: 0 },       // toward bookshelf
-  { x: 5, z: -3.5, pause: 4 },       // bookshelf
-  { x: 4, z: -2.5, pause: 0 },       // walk back
-  { x: -4, z: -2.5, pause: 0 },      // cross behind desk
-  { x: -6.5, z: -2, pause: 0 },      // past plant
-  { x: -5.5, z: 1, pause: 0 },       // pass inside lamp
-  { x: -5, z: 3, pause: 2 },         // back to start
+  { x: -5, z: 3, pause: 1, lookAt: 0 },                        // start (look forward)
+  { x: -5.5, z: 1, pause: 0 },                                 // pass inside lamp
+  { x: -6.5, z: -2, pause: 4, lookAt: -Math.PI / 2 },          // stop at poster/keyboard (look left)
+  { x: -4, z: -2.5, pause: 0 },                                // walk behind desk
+  { x: 4, z: -2.5, pause: 0 },                                 // cross behind desk
+  { x: 5, z: -3.5, pause: 4, lookAt: Math.PI },                // bookshelf (look back)
+  { x: 5.5, z: -0.5, pause: 4, lookAt: Math.PI / 2 },          // window (look right)
+  { x: 5.5, z: 3.5, pause: 0 },                                // walk forward towards camera to clear desk corner
+  { x: 0, z: 3.5, pause: 0 }                                   // cross front of desk (behind chair)
 ];
 let wpIndex = 0;
 let wpPauseTimer = 0;
@@ -855,16 +888,9 @@ function showWorld() {
 function showMenu() {
   currentState = 'MENU';
   updateOutlineSelection();
-  setCharacterMoving(false);
   hudEl.style.opacity = '0';
   backBtn.style.display = 'none';
   charAtDesk = false;
-  wpIndex = 0;
-  characterGroup.position.set(-5, 0, 3);
-  characterGroup.rotation.y = 0;
-  armLUpper.rotation.x = 0; armRUpper.rotation.x = 0;
-  legLUpper.rotation.x = 0; legRUpper.rotation.x = 0;
-  legLLower.rotation.x = 0; legRLower.rotation.x = 0;
   modal.classList.remove('open');
   hoveredObj = null;
   label.style.opacity = '0';
@@ -880,23 +906,38 @@ function showLaptopView() {
   currentState = 'LAPTOP';
   charAtDesk = false;
   flyTo(CAM_STATES.LAPTOP.pos, CAM_STATES.LAPTOP.target, 2.0, () => {
-    openProjectModal();
+    if (kbSound.isPlaying) kbSound.stop();
+    kbSound.play();
+    
+    setTimeout(() => {
+      if (screenUpSound.isPlaying) screenUpSound.stop();
+      screenUpSound.play();
+      openProjectModal();
+    }, 600);
   });
 }
 
-function backFromLaptop() {
+function showPlantView() {
+  currentState = 'PLANT';
+  charAtDesk = false;
+  flyTo(CAM_STATES.PLANT.pos, CAM_STATES.PLANT.target, 2.0, () => {
+    openSkillTreeModal();
+  });
+}
+
+function backFromView() {
+  if (currentState === 'LAPTOP') {
+    if (screenOffSound.isPlaying) screenOffSound.stop();
+    screenOffSound.play();
+  }
+  if (currentState === 'PLANT') {
+    if (bushRevSound.isPlaying) bushRevSound.stop();
+    bushRevSound.play();
+  }
+
   modal.classList.remove('open');
   currentState = 'ROOM';
   charAtDesk = false;
-  setCharacterMoving(false);
-  // Reset to walk start
-  wpIndex = 0;
-  characterGroup.position.set(-5, 0, 3);
-  characterGroup.rotation.y = 0;
-  // Reset limb rotations
-  armLUpper.rotation.x = 0; armRUpper.rotation.x = 0;
-  legLUpper.rotation.x = 0; legRUpper.rotation.x = 0;
-  legLLower.rotation.x = 0; legRLower.rotation.x = 0;
   hoveredObj = null;
   label.style.opacity = '0';
   cur.classList.remove('hovering');
@@ -906,39 +947,77 @@ function backFromLaptop() {
 function openProjectModal() {
   modalTitle.textContent = '\uD83D\uDCBB OLAN\'S PROJECTS';
   modalBody.innerHTML = `
-    <div class="proj-card-row">
+    <div class="proj-card-row" onclick="window.open('https://github.com/OlanIsm/V-Phone', '_blank')">
       <div class="proj-card-info">
         <div class="proj-tag">COMPLETED</div>
-        <div class="proj-name">YT DOWNLOADER</div>
-        <div class="proj-desc">Flask web app untuk download YouTube videos via WiFi. Accessible dari semua device di network yang sama. Built with yt-dlp backend.</div>
+        <div class="proj-name">V-PHONE</div>
+        <div class="proj-desc">Website jualan HP yang interaktif dan responsif. Showcase product dengan smooth animations.</div>
         <div class="proj-tech">
-          <span class="tech-chip">PYTHON</span><span class="tech-chip">FLASK</span><span class="tech-chip">YT-DLP</span><span class="tech-chip">HTML/CSS</span>
+          <span class="tech-chip">HTML</span><span class="tech-chip">CSS</span><span class="tech-chip">JS</span>
         </div>
       </div>
-      <div class="proj-card-img"><img src="img/proj_ytdownloader.png" alt="YT Downloader"></div>
+      <div class="proj-card-img"><img src="img/proj_ytdownloader.png" alt="V-Phone"></div>
     </div>
-    <div class="proj-card-row">
+    <div class="proj-card-row" onclick="window.open('https://github.com/OlanIsm/Electus-PROJECT', '_blank')">
       <div class="proj-card-info">
         <div class="proj-tag" style="border-color:#88ccff;color:#88ccff;background:rgba(136,204,255,0.1)">IN PROGRESS</div>
-        <div class="proj-name">ATS + AI CV SUMMARIZER</div>
-        <div class="proj-desc">Applicant Tracking System dengan AI-powered CV summarization menggunakan Claude API. Full stack: React frontend, FastAPI backend, SQLite DB.</div>
+        <div class="proj-name">ELECTUS ATS + AI CV</div>
+        <div class="proj-desc">Applicant Tracking System dengan AI-powered CV summarization menggunakan Gemini API. Full stack: React frontend, Nest.js backend, PostgreSQL DB.</div>
         <div class="proj-tech">
-          <span class="tech-chip">REACT</span><span class="tech-chip">FASTAPI</span><span class="tech-chip">SQLITE</span><span class="tech-chip">CLAUDE API</span>
+          <span class="tech-chip">REACT</span><span class="tech-chip">NEST.TS</span><span class="tech-chip">POSTGRE</span><span class="tech-chip">GEMINI API</span>
         </div>
       </div>
-      <div class="proj-card-img"><img src="img/proj_ats.png" alt="ATS"></div>
+      <div class="proj-card-img" style="background: #120e0a;"><img src="img/proj_ats.png" alt="ATS" style="object-fit: contain;"></div>
     </div>
-    <div class="proj-card-row">
+    <div class="proj-card-row" onclick="window.open('https://github.com/OlanIsm/WSpeedrun', '_blank')">
       <div class="proj-card-info">
         <div class="proj-tag" style="border-color:#aa88ff;color:#aa88ff;background:rgba(170,136,255,0.1)">LEARNING</div>
-        <div class="proj-name">NESTJS REST API</div>
-        <div class="proj-desc">Exploring TypeScript + NestJS untuk project requirement. Belajar REST API patterns, controllers, services, dan dependency injection.</div>
+        <div class="proj-name">WSpeedRun (REST backend)</div>
+        <div class="proj-desc">REST API backend platform speedrun. Exploring data relations, auth, dan optimal endpoint architecture.</div>
         <div class="proj-tech">
-          <span class="tech-chip">TYPESCRIPT</span><span class="tech-chip">NESTJS</span><span class="tech-chip">REST API</span>
+          <span class="tech-chip">NODE.JS</span><span class="tech-chip">REST API</span><span class="tech-chip">BACKEND</span>
         </div>
       </div>
-      <div class="proj-card-img"><img src="img/proj_nestjs.png" alt="NestJS"></div>
+      <div class="proj-card-img"><img src="img/proj_nestjs.png" alt="WSpeedRun"></div>
     </div>`;
+  modal.classList.add('open');
+}
+
+function openSkillTreeModal() {
+  modalTitle.textContent = '\uD83C\uDF31 OLAN\'S SKILL TREE';
+  
+  const skills = [
+    { name: 'JavaScript / TS', pct: 90, color: '#ffd080' },
+    { name: 'React & Next.js', pct: 85, color: '#88ccff' },
+    { name: 'Python & Flask', pct: 80, color: '#ff88aa' },
+    { name: 'HTML / CSS', pct: 95, color: '#ffdd66' },
+    { name: 'Node & Express', pct: 75, color: '#88ffcc' },
+    { name: 'Three.js / WebGL', pct: 70, color: '#aa88ff' }
+  ];
+  
+  let branchesHTML = '';
+  skills.forEach((skill, i) => {
+    branchesHTML += `
+      <div class="st-branch">
+        <div class="st-skill">
+          <div class="st-skill-top">
+            <span class="st-skill-name">${skill.name}</span>
+            <span class="st-skill-pct">${skill.pct}%</span>
+          </div>
+          <div class="st-bar-bg"><div class="st-bar-fill" style="width:${skill.pct}%; background:${skill.color};"></div></div>
+        </div>
+      </div>
+    `;
+  });
+
+  modalBody.innerHTML = `
+    <div class="skill-tree">
+      <div class="st-root">CORE ROOT</div>
+      <div class="st-branches">
+        ${branchesHTML}
+      </div>
+    </div>
+  `;
   modal.classList.add('open');
 }
 
@@ -957,6 +1036,8 @@ document.addEventListener('mousemove', e => {
 document.querySelectorAll('.menu-item').forEach(item => {
   item.addEventListener('click', () => {
     if(item.classList.contains('disabled')) return;
+    if(clickSound.isPlaying) clickSound.stop();
+    clickSound.play();
     const action = item.dataset.action;
     if(action === 'enter') { showWorld(); return; }
     if(action === 'projects') { showWorld(); setTimeout(showLaptopView, 800); return; }
@@ -968,20 +1049,26 @@ document.querySelectorAll('.menu-item').forEach(item => {
 });
 
 backBtn.addEventListener('click', () => {
-  if(currentState === 'LAPTOP') backFromLaptop();
+  if(clickSound.isPlaying) clickSound.stop();
+  clickSound.play();
+  if(currentState === 'LAPTOP' || currentState === 'PLANT') backFromView();
   else showMenu();
 });
 backBtn.addEventListener('mouseenter', () => cur.classList.add('hovering'));
 backBtn.addEventListener('mouseleave', () => cur.classList.remove('hovering'));
 
 document.getElementById('modal-close').addEventListener('click', () => {
+  if(clickSound.isPlaying) clickSound.stop();
+  clickSound.play();
   modal.classList.remove('open');
-  if(currentState === 'LAPTOP') backFromLaptop();
+  if(currentState === 'LAPTOP' || currentState === 'PLANT') backFromView();
 });
 modal.addEventListener('click', e => {
   if(e.target === modal) {
+    if(clickSound.isPlaying) clickSound.stop();
+    clickSound.play();
     modal.classList.remove('open');
-    if(currentState === 'LAPTOP') backFromLaptop();
+    if(currentState === 'LAPTOP' || currentState === 'PLANT') backFromView();
   }
 });
 
@@ -997,23 +1084,31 @@ canvas.addEventListener('click', () => {
     if (obj) {
       visitedInteractives.add(obj);
       updateOutlineSelection();
-    }
-    if(obj && obj.userData.id === 'laptop') { showLaptopView(); }
-    else if(obj && obj.userData.id === 'lamp') {
-      obj.userData.on = !obj.userData.on;
-      playLampSfx(obj.userData.on);
       
-      // Update label immediately
-      label.textContent = obj.userData.on ? '\uD83D\uDCA1 TURN OFF LAMP' : '\uD83D\uDCA1 TURN ON LAMP';
+      if(obj.userData.id === 'laptop') { showLaptopView(); }
+      else if(obj.userData.id === 'plant') {
+        showPlantView();
+        setTimeout(() => {
+          if(bushSound.isPlaying) bushSound.stop();
+          bushSound.play();
+        }, 200); // 10% delay
+      }
+      else if(obj.userData.id === 'lamp') {
+        obj.userData.on = !obj.userData.on;
+        if(typeof playLampSfx !== 'undefined') playLampSfx(obj.userData.on);
+        
+        // Update label immediately
+        label.textContent = obj.userData.on ? '\uD83D\uDCA1 TURN OFF LAMP' : '\uD83D\uDCA1 TURN ON LAMP';
 
-      // Set intensity to 0 instead of visibility = false to prevent shader recompilation freezes
-      if (obj.userData.toggleLight) obj.userData.toggleLight.intensity = obj.userData.on ? obj.userData.baseLightInt : 0;
-      if (obj.userData.toggleSpot) obj.userData.toggleSpot.intensity = obj.userData.on ? obj.userData.baseSpotInt : 0;
-      if (obj.userData.mat) obj.userData.mat.emissiveIntensity = obj.userData.on ? (obj.userData.emissiveOn || 0.4) : 0.0;
-    }
-    else if(obj && obj.userData.id === 'cat') {
-      if(catSound.isPlaying) catSound.stop();
-      catSound.play();
+        // Set intensity to 0 instead of visibility = false to prevent shader recompilation freezes
+        if (obj.userData.toggleLight) obj.userData.toggleLight.intensity = obj.userData.on ? obj.userData.baseLightInt : 0;
+        if (obj.userData.toggleSpot) obj.userData.toggleSpot.intensity = obj.userData.on ? obj.userData.baseSpotInt : 0;
+        if (obj.userData.mat) obj.userData.mat.emissiveIntensity = obj.userData.on ? (obj.userData.emissiveOn || 0.4) : 0.0;
+      }
+      else if(obj.userData.id === 'cat') {
+        if(catSound.isPlaying) catSound.stop();
+        catSound.play();
+      }
     }
   }
 });
@@ -1073,6 +1168,14 @@ function animate() {
       if(wp.pause > 0 && wpPauseTimer < wp.pause) {
         // Pausing (looking at poster/bookshelf)
         wpPauseTimer += dt;
+        
+        if(wp.lookAt !== undefined) {
+          let diff = wp.lookAt - characterGroup.rotation.y;
+          while(diff < -Math.PI) diff += Math.PI * 2;
+          while(diff > Math.PI) diff -= Math.PI * 2;
+          characterGroup.rotation.y += diff * (dt * 5);
+        }
+
         // Idle animation - slight body sway
         legLUpper.rotation.x = 0; legRUpper.rotation.x = 0;
         legLLower.rotation.x = 0; legRLower.rotation.x = 0;
