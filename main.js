@@ -23,6 +23,7 @@ const CAM_STATES = {
   ROOM:   { pos: new THREE.Vector3(0, 3.5, 12), target: new THREE.Vector3(0, 3.5, -2) },
   LAPTOP: { pos: new THREE.Vector3(2.5, 5.5, 4), target: new THREE.Vector3(0.8, 2.5, 0.3) },
   PLANT:  { pos: new THREE.Vector3(-3.5, 4.5, 0), target: new THREE.Vector3(-5.8, 3.0, -4) },
+  POSTER: { pos: new THREE.Vector3(1, 4.5, -3.0), target: new THREE.Vector3(1, 4.5, -6.75) },
 };
 camera.position.copy(CAM_STATES.MENU.pos);
 const camTarget = new THREE.Vector3().copy(CAM_STATES.MENU.target);
@@ -925,6 +926,14 @@ function showPlantView() {
   });
 }
 
+function showPosterView() {
+  currentState = 'POSTER';
+  charAtDesk = false;
+  flyTo(CAM_STATES.POSTER.pos, CAM_STATES.POSTER.target, 2.0, () => {
+    openContactModal();
+  });
+}
+
 function backFromView() {
   if (currentState === 'LAPTOP') {
     if (screenOffSound.isPlaying) screenOffSound.stop();
@@ -942,6 +951,57 @@ function backFromView() {
   label.style.opacity = '0';
   cur.classList.remove('hovering');
   flyTo(CAM_STATES.ROOM.pos, CAM_STATES.ROOM.target, 1.8);
+}
+
+function openContactModal() {
+  modalTitle.textContent = '\uD83D\uDCDE OLAN\'S CONTACT & SOCIALS';
+  modalBody.innerHTML = `
+    <div class="contact-row" onclick="window.open('https://instagram.com/olan.ism', '_blank')">
+      <div class="contact-icon">
+        <svg viewBox="0 0 24 24">
+          <path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zM12 0C8.741 0 8.333.014 7.053.072 2.695.272.273 2.69.073 7.051.014 8.333 0 8.741 0 12c0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98C15.668.014 15.259 0 12 0zm0 5.838a6.162 6.162 0 100 12.324 6.162 6.162 0 000-12.324zM12 16a4 4 0 110-8 4 4 0 010 8zm6.406-11.845a1.44 1.44 0 100 2.881 1.44 1.44 0 000-2.881z"/>
+        </svg>
+      </div>
+      <div class="contact-info">
+        <div class="contact-label">INSTAGRAM</div>
+        <div class="contact-val">@olan.ism</div>
+      </div>
+    </div>
+    <div class="contact-row" onclick="window.open('https://youtube.com/@olanwalaweh', '_blank')">
+      <div class="contact-icon">
+        <svg viewBox="0 0 24 24">
+          <path d="M23.498 6.163a3.003 3.003 0 00-2.11-2.11C19.517 3.545 12 3.545 12 3.545s-7.517 0-9.388.508a3.003 3.003 0 00-2.11 2.11C0 8.033 0 12 0 12s0 3.967.502 5.837a3.003 3.003 0 002.11 2.11c1.871.508 9.388.508 9.388.508s7.517 0 9.388-.508a3.003 3.003 0 002.11-2.11C24 15.967 24 12 24 12s0-3.967-.502-5.837zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/>
+        </svg>
+      </div>
+      <div class="contact-info">
+        <div class="contact-label">YOUTUBE</div>
+        <div class="contact-val">@olanwalaweh</div>
+      </div>
+    </div>
+    <div class="contact-row" onclick="window.open('https://www.linkedin.com/in/insan-maulana-104a04263', '_blank')">
+      <div class="contact-icon">
+        <svg viewBox="0 0 24 24">
+          <path d="M22.23 0H1.77C.8 0 0 .77 0 1.72v20.56C0 23.23.8 24 1.77 24h20.46c.98 0 1.77-.77 1.77-1.72V1.72C24 .77 23.2 0 22.23 0zM7.12 20.45H3.56V9h3.56v11.45zM5.34 7.43c-1.14 0-2.06-.92-2.06-2.06 0-1.14.92-2.06 2.06-2.06 1.14 0 2.06.92 2.06 2.06 0 1.14-.92 2.06-2.06 2.06zm15.11 13.02h-3.56v-5.6c0-1.34-.03-3.05-1.86-3.05-1.86 0-2.14 1.45-2.14 2.95v5.7H9.33V9h3.42v1.56h.05c.48-.9 1.64-1.85 3.37-1.85 3.6 0 4.27 2.37 4.27 5.45v6.29z"/>
+        </svg>
+      </div>
+      <div class="contact-info">
+        <div class="contact-label">LINKEDIN</div>
+        <div class="contact-val">Insan Maulana</div>
+      </div>
+    </div>
+    <div class="contact-row" onclick="window.open('https://github.com/OlanIsm', '_blank')">
+      <div class="contact-icon">
+        <svg viewBox="0 0 24 24">
+          <path d="M12 .297c-6.63 0-12 5.373-12 12 0 5.303 3.438 9.8 8.205 11.385.6.113.82-.258.82-.577 0-.285-.01-1.04-.015-2.04-3.338.724-4.042-1.61-4.042-1.61C4.422 18.07 3.633 17.7 3.633 17.7c-1.087-.744.084-.729.084-.729 1.205.084 1.838 1.236 1.838 1.236 1.07 1.835 2.809 1.305 3.495.998.108-.776.417-1.305.76-1.605-2.665-.3-5.466-1.332-5.466-5.93 0-1.31.465-2.38 1.235-3.22-.135-.303-.54-1.523.105-3.176 0 0 1.005-.322 3.3 1.23.96-.267 1.98-.399 3-.405 1.02.006 2.04.138 3 .405 2.28-1.552 3.285-1.23 3.285-1.23.645 1.653.24 2.873.12 3.176.765.84 1.23 1.91 1.23 3.22 0 4.61-2.805 5.625-5.475 5.92.42.36.81 1.096.81 2.22 0 1.606-.015 2.896-.015 3.286 0 .315.21.69.825.57C20.565 22.092 24 17.592 24 12.297c0-6.627-5.373-12-12-12"/>
+        </svg>
+      </div>
+      <div class="contact-info">
+        <div class="contact-label">GITHUB</div>
+        <div class="contact-val">OlanIsm</div>
+      </div>
+    </div>
+  `;
+  modal.classList.add('open');
 }
 
 function openProjectModal() {
@@ -987,12 +1047,42 @@ function openSkillTreeModal() {
   modalTitle.textContent = '\uD83C\uDF31 OLAN\'S SKILL TREE';
   
   const skills = [
-    { name: 'JavaScript / TS', pct: 90, color: '#ffd080' },
-    { name: 'React & Next.js', pct: 85, color: '#88ccff' },
-    { name: 'Python & Flask', pct: 80, color: '#ff88aa' },
-    { name: 'HTML / CSS', pct: 95, color: '#ffdd66' },
-    { name: 'Node & Express', pct: 75, color: '#88ffcc' },
-    { name: 'Three.js / WebGL', pct: 70, color: '#aa88ff' }
+    { 
+      name: 'JavaScript / TS', 
+      pct: 90, 
+      color: '#ffd080',
+      icon: `<svg viewBox="0 0 24 24"><rect x="2" y="2" width="20" height="20" rx="3" fill="#3178c6"/><path d="M11.5 8.5H7v1.5h1.5v5.5h1.5v-5.5h1.5z M13.5 13.5c.3.5.8.8 1.5.8.7 0 1.2-.3 1.2-.8s-.4-.7-1.2-1c-1.2-.4-2-.8-2-2 0-1.2.9-2.2 2.2-2.2 1.2 0 2 .5 2.5 1.5l-1.2.8c-.3-.5-.7-.8-1.3-.8-.6 0-1 .3-1 .7s.3.5 1 .8c1.3.4 2.2.9 2.2 2.2 0 1.3-1 2.2-2.5 2.2-1.5 0-2.3-.7-2.7-1.7l1.3-.8z" fill="#ffffff"/></svg>`
+    },
+    { 
+      name: 'React & Next.js', 
+      pct: 85, 
+      color: '#88ccff',
+      icon: `<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="2" fill="#88ccff"/><path d="M12 7c3.86 0 7-1.34 7-3s-3.14-3-7-3-7 1.34-7 3 3.14 3 7 3zm0 10c-3.86 0-7 1.34-7 3s3.14 3 7 3 7-1.34 7-3-3.14-3-7-3zm0-5c-1.93 0-3.5-.67-3.5-1.5S10.07 9 12 9s3.5.67 3.5 1.5S13.93 12 12 12z" fill="none" stroke="#88ccff" stroke-width="1.2"/><ellipse cx="12" cy="12" rx="10" ry="3.5" fill="none" stroke="#88ccff" stroke-width="1.2" transform="rotate(30 12 12)"/><ellipse cx="12" cy="12" rx="10" ry="3.5" fill="none" stroke="#88ccff" stroke-width="1.2" transform="rotate(90 12 12)"/><ellipse cx="12" cy="12" rx="10" ry="3.5" fill="none" stroke="#88ccff" stroke-width="1.2" transform="rotate(150 12 12)"/></svg>`
+    },
+    { 
+      name: 'Python & Flask', 
+      pct: 80, 
+      color: '#ff88aa',
+      icon: `<svg viewBox="0 0 24 24" fill="none" stroke="#ff88aa" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v8c0 1.1-.9 2-2 2H2v2c0 3.3 2.7 6 6 6h4v-8c0-1.1.9-2 2-2h8v-2c0-3.3-2.7-6-6-6h-4z"/><path d="M12 22v-8c0-1.1.9-2 2-2h8v-2c0-3.3-2.7-6-6-6h-4v8c0 1.1-.9 2-2 2H2v2c0 3.3 2.7 6 6 6h4z" stroke="#ffd080"/><circle cx="6" cy="6" r="1" fill="#ff88aa"/><circle cx="18" cy="18" r="1" fill="#ffd080"/></svg>`
+    },
+    { 
+      name: 'HTML / CSS', 
+      pct: 95, 
+      color: '#ffdd66',
+      icon: `<svg viewBox="0 0 24 24" fill="#ffdd66"><path d="M1.5 0h21l-1.9 21.2L12 24l-8.6-2.8L1.5 0zm15.8 5.7H6.7l.4 4.5h9.6l-.4 4.7-4.3 1.4-4.3-1.4-.3-3.1h2.5l.2 1.6 1.9.6 1.9-.6.2-2.2H7.5l-.8-9.1h10.9l-.3 3.6z"/></svg>`
+    },
+    { 
+      name: 'Node & Express', 
+      pct: 75, 
+      color: '#88ffcc',
+      icon: `<svg viewBox="0 0 24 24" fill="#88ffcc"><path d="M12 1.25L3.25 6.3v10.1L12 21.5l8.75-5.1V6.3L12 1.25zM12 3.8l6.5 3.8v7.6l-6.5 3.8-6.5-3.8V7.6L12 3.8z"/><path d="M12 7.5L8.5 9.5v3.5l3.5 2 3.5-2V9.5L12 7.5z"/></svg>`
+    },
+    { 
+      name: 'Three.js / WebGL', 
+      pct: 70, 
+      color: '#aa88ff',
+      icon: `<svg viewBox="0 0 24 24" fill="none" stroke="#aa88ff" stroke-width="1.5"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>`
+    }
   ];
   
   let branchesHTML = '';
@@ -1000,25 +1090,68 @@ function openSkillTreeModal() {
     branchesHTML += `
       <div class="st-branch">
         <div class="st-skill">
-          <div class="st-skill-top">
+          <div class="st-skill-header">
+            <span class="st-skill-icon">${skill.icon}</span>
             <span class="st-skill-name">${skill.name}</span>
-            <span class="st-skill-pct">${skill.pct}%</span>
           </div>
-          <div class="st-bar-bg"><div class="st-bar-fill" style="width:${skill.pct}%; background:${skill.color};"></div></div>
+          <div class="st-skill-body">
+            <div class="st-skill-info">
+              <span class="st-skill-pct">${skill.pct}%</span>
+            </div>
+            <div class="st-bar-bg"><div class="st-bar-fill" style="width:${skill.pct}%; background:${skill.color};"></div></div>
+          </div>
         </div>
       </div>
     `;
   });
 
   modalBody.innerHTML = `
-    <div class="skill-tree">
-      <div class="st-root">CORE ROOT</div>
-      <div class="st-branches">
-        ${branchesHTML}
+    <div class="skill-tree-container">
+      <div class="skill-tree-horizontal">
+        <div class="st-root">CORE ROOT</div>
+        <div class="st-branches">
+          ${branchesHTML}
+        </div>
       </div>
     </div>
   `;
   modal.classList.add('open');
+
+  // Add scroll event handlers
+  const stContainer = modalBody.querySelector('.skill-tree-container');
+  if (stContainer) {
+    // 1. Mouse wheel horizontal scrolling
+    stContainer.addEventListener('wheel', (e) => {
+      if (e.deltaY !== 0) {
+        e.preventDefault();
+        stContainer.scrollLeft += e.deltaY * 1.5;
+      }
+    }, { passive: false });
+
+    // 2. Click-and-drag (grab-to-scroll)
+    let isDown = false;
+    let startX;
+    let scrollLeft;
+
+    stContainer.addEventListener('mousedown', (e) => {
+      isDown = true;
+      startX = e.pageX - stContainer.offsetLeft;
+      scrollLeft = stContainer.scrollLeft;
+    });
+    stContainer.addEventListener('mouseleave', () => {
+      isDown = false;
+    });
+    stContainer.addEventListener('mouseup', () => {
+      isDown = false;
+    });
+    stContainer.addEventListener('mousemove', (e) => {
+      if (!isDown) return;
+      e.preventDefault();
+      const x = e.pageX - stContainer.offsetLeft;
+      const walk = (x - startX) * 2;
+      stContainer.scrollLeft = scrollLeft - walk;
+    });
+  }
 }
 
 // ── EVENTS ──
@@ -1041,6 +1174,7 @@ document.querySelectorAll('.menu-item').forEach(item => {
     const action = item.dataset.action;
     if(action === 'enter') { showWorld(); return; }
     if(action === 'projects') { showWorld(); setTimeout(showLaptopView, 800); return; }
+    if(action === 'contact') { showWorld(); setTimeout(showPosterView, 800); return; }
   });
   item.addEventListener('mouseenter', () => {
     if(!item.classList.contains('disabled')) cur.classList.add('hovering');
@@ -1051,7 +1185,7 @@ document.querySelectorAll('.menu-item').forEach(item => {
 backBtn.addEventListener('click', () => {
   if(clickSound.isPlaying) clickSound.stop();
   clickSound.play();
-  if(currentState === 'LAPTOP' || currentState === 'PLANT') backFromView();
+  if(currentState === 'LAPTOP' || currentState === 'PLANT' || currentState === 'POSTER') backFromView();
   else showMenu();
 });
 backBtn.addEventListener('mouseenter', () => cur.classList.add('hovering'));
@@ -1061,14 +1195,14 @@ document.getElementById('modal-close').addEventListener('click', () => {
   if(clickSound.isPlaying) clickSound.stop();
   clickSound.play();
   modal.classList.remove('open');
-  if(currentState === 'LAPTOP' || currentState === 'PLANT') backFromView();
+  if(currentState === 'LAPTOP' || currentState === 'PLANT' || currentState === 'POSTER') backFromView();
 });
 modal.addEventListener('click', e => {
   if(e.target === modal) {
     if(clickSound.isPlaying) clickSound.stop();
     clickSound.play();
     modal.classList.remove('open');
-    if(currentState === 'LAPTOP' || currentState === 'PLANT') backFromView();
+    if(currentState === 'LAPTOP' || currentState === 'PLANT' || currentState === 'POSTER') backFromView();
   }
 });
 
@@ -1108,6 +1242,9 @@ canvas.addEventListener('click', () => {
       else if(obj.userData.id === 'cat') {
         if(catSound.isPlaying) catSound.stop();
         catSound.play();
+      }
+      else if(obj.userData.id === 'poster') {
+        showPosterView();
       }
     }
   }
