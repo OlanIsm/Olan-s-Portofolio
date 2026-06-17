@@ -337,7 +337,7 @@ body {
   border:2px solid #ffd080;
   color:#ffd080; margin-bottom:10px;
 }
-.proj-name { font-size:10px; color:#f0e0c0; margin-bottom:8px; }
+.proj-name { font-size:10px; color:#f0e0c0; margin-bottom:8px; line-height: 1.5; }
 .proj-desc { font-family:'VT323',monospace; font-size:17px; color:#a08050; line-height:1.5; }
 .proj-tech { display:flex; gap:6px; flex-wrap:wrap; margin-top:12px; }
 .tech-chip { font-size:6px; padding:3px 7px; background:#1a140e; border:2px solid #4a3a20; color:#a08050; }

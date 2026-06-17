@@ -1007,38 +1007,71 @@ function openContactModal() {
 function openProjectModal() {
   modalTitle.textContent = '\uD83D\uDCBB OLAN\'S PROJECTS';
   modalBody.innerHTML = `
-    <div class="proj-card-row" onclick="window.open('https://github.com/OlanIsm/V-Phone', '_blank')">
-      <div class="proj-card-info">
-        <div class="proj-tag">COMPLETED</div>
-        <div class="proj-name">V-PHONE</div>
-        <div class="proj-desc">Website jualan HP yang interaktif dan responsif. Showcase product dengan smooth animations.</div>
-        <div class="proj-tech">
-          <span class="tech-chip">HTML</span><span class="tech-chip">CSS</span><span class="tech-chip">JS</span>
-        </div>
-      </div>
-      <div class="proj-card-img"><img src="img/proj_ytdownloader.png" alt="V-Phone"></div>
-    </div>
     <div class="proj-card-row" onclick="window.open('https://github.com/OlanIsm/Electus-PROJECT', '_blank')">
       <div class="proj-card-info">
         <div class="proj-tag" style="border-color:#88ccff;color:#88ccff;background:rgba(136,204,255,0.1)">IN PROGRESS</div>
         <div class="proj-name">ELECTUS ATS + AI CV</div>
-        <div class="proj-desc">Applicant Tracking System dengan AI-powered CV summarization menggunakan Gemini API. Full stack: React frontend, Nest.js backend, PostgreSQL DB.</div>
+        <div class="proj-desc">Applicant Tracking System with AI-powered CV summarization using Gemini API. Full stack development featuring React frontend, Nest.js backend, and PostgreSQL database.</div>
         <div class="proj-tech">
           <span class="tech-chip">REACT</span><span class="tech-chip">NEST.TS</span><span class="tech-chip">POSTGRE</span><span class="tech-chip">GEMINI API</span>
         </div>
       </div>
       <div class="proj-card-img" style="background: #120e0a;"><img src="img/proj_ats.png" alt="ATS" style="object-fit: contain;"></div>
     </div>
-    <div class="proj-card-row" onclick="window.open('https://github.com/OlanIsm/WSpeedrun', '_blank')">
+    <div class="proj-card-row" onclick="window.open('https://github.com/OlanIsm/TechnoScape-2026-Hackathon', '_blank')">
       <div class="proj-card-info">
-        <div class="proj-tag" style="border-color:#aa88ff;color:#aa88ff;background:rgba(170,136,255,0.1)">LEARNING</div>
-        <div class="proj-name">WSpeedRun (REST backend)</div>
-        <div class="proj-desc">REST API backend platform speedrun. Exploring data relations, auth, dan optimal endpoint architecture.</div>
+        <div class="proj-tag" style="border-color:#ff88aa;color:#ff88aa;background:rgba(255,136,170,0.1)">HACKATHON FINALIST</div>
+        <div class="proj-name">VOLUMEMATE</div>
+        <div class="proj-desc">Cooperative application featuring collective buying and AI-driven demand forecasting with optimal buying recommendations to empower cooperatives. TechnoScape Hackathon 2026 Finalist.</div>
         <div class="proj-tech">
-          <span class="tech-chip">NODE.JS</span><span class="tech-chip">REST API</span><span class="tech-chip">BACKEND</span>
+          <span class="tech-chip">REACT</span><span class="tech-chip">NEXT.JS</span><span class="tech-chip">AI FORECASTING</span>
         </div>
       </div>
-      <div class="proj-card-img"><img src="img/proj_nestjs.png" alt="WSpeedRun"></div>
+      <div class="proj-card-img" style="background: #120e0a;"><img src="img/VolumeMate.png" alt="VolumeMate" style="object-fit: contain;"></div>
+    </div>
+    <div class="proj-card-row" onclick="window.open('https://github.com/OlanIsm/Carbon-Emission-Ai-Prediction', '_blank')">
+      <div class="proj-card-info">
+        <div class="proj-tag" style="border-color:#88ffcc;color:#88ffcc;background:rgba(136,255,204,0.1)">MVP / ML</div>
+        <div class="proj-name">EMITRACK</div>
+        <div class="proj-desc">Machine Learning MVP application designed to predict vehicle carbon emissions based on car model and specifications.</div>
+        <div class="proj-tech">
+          <span class="tech-chip">PYTHON</span><span class="tech-chip">MACHINE LEARNING</span><span class="tech-chip">MVP</span>
+        </div>
+      </div>
+      <div class="proj-card-img" style="background: #120e0a;"><img src="img/EmiTrack.png" alt="EmiTrack" style="object-fit: contain;"></div>
+    </div>
+    <div class="proj-card-row" onclick="window.open('https://github.com/OlanIsm/Genshin-Import', '_blank')">
+      <div class="proj-card-info">
+        <div class="proj-tag" style="border-color:#aa88ff;color:#aa88ff;background:rgba(170,136,255,0.1)">MOBILE / CRUD</div>
+        <div class="proj-name">GENSHIN IMPORT</div>
+        <div class="proj-desc">My first mobile CRUD application themed around Genshin Impact, allowing users to simulate buying and selling Genshin weapons and artifacts.</div>
+        <div class="proj-tech">
+          <span class="tech-chip">MOBILE</span><span class="tech-chip">CRUD</span><span class="tech-chip">JAVA/KOTLIN</span>
+        </div>
+      </div>
+      <div class="proj-card-img" style="background: #120e0a;"><img src="img/GenshinImport.png" alt="Genshin Import" style="object-fit: contain;"></div>
+    </div>
+    <div class="proj-card-row" onclick="window.open('https://github.com/OlanIsm/V-Phone', '_blank')">
+      <div class="proj-card-info">
+        <div class="proj-tag">COMPLETED</div>
+        <div class="proj-name">V-PHONE</div>
+        <div class="proj-desc">An interactive and responsive smartphone e-commerce website. My very first basic web project built purely with vanilla HTML, CSS, and Javascript without any frameworks.</div>
+        <div class="proj-tech">
+          <span class="tech-chip">HTML</span><span class="tech-chip">CSS</span><span class="tech-chip">JAVASCRIPT</span>
+        </div>
+      </div>
+      <div class="proj-card-img" style="background: #120e0a;"><img src="img/V-Phone.png" alt="V-Phone" style="object-fit: contain;"></div>
+    </div>
+    <div class="proj-card-row" onclick="window.open('https://github.com/OlanIsm/Olan-s-Portofolio', '_blank')">
+      <div class="proj-card-info">
+        <div class="proj-tag" style="border-color:#88ccff;color:#88ccff;background:rgba(136,204,255,0.1)">IN PROGRESS</div>
+        <div class="proj-name">OLAN.DEV (PORTFOLIO)</div>
+        <div class="proj-desc">Interactive 3D portfolio website featuring a pixel-art style bedroom visualization, showcasing my projects, interactive skill tree, and social contact details.</div>
+        <div class="proj-tech">
+          <span class="tech-chip">THREE.JS</span><span class="tech-chip">HTML</span><span class="tech-chip">CSS</span><span class="tech-chip">JAVASCRIPT</span>
+        </div>
+      </div>
+      <div class="proj-card-img" style="background: #120e0a;"><img src="img/Olan.dev.png" alt="Olan.dev" style="object-fit: contain;"></div>
     </div>`;
   modal.classList.add('open');
 }
