@@ -16,16 +16,20 @@ export function setCharacterMoving(moving) {
   if (isCharacterMoving === moving) return;
   isCharacterMoving = moving;
   if (moving) {
-    if (characterActions.idle) characterActions.idle.stop();
+    if (characterActions.idle) {
+      characterActions.idle.stop();
+    }
     if (characterActions.walk) {
+      characterActions.walk.reset();
       characterActions.walk.paused = false;
       characterActions.walk.play();
     }
   } else {
     if (characterActions.walk) {
-      characterActions.walk.pause();
+      characterActions.walk.stop();
     }
     if (characterActions.idle) {
+      characterActions.idle.reset();
       characterActions.idle.play();
     }
   }
@@ -45,12 +49,14 @@ export function loadCharacterModel() {
       const mixer = new THREE.AnimationMixer(characterModel);
       characterActions.walk = walkClip ? mixer.clipAction(walkClip) : null;
       characterActions.idle = idleClip ? mixer.clipAction(idleClip) : null;
-      if (characterActions.idle) characterActions.idle.play();
-      else if (characterActions.walk) {
-        characterActions.walk.play();
-        characterActions.walk.paused = true;
-      }
       animationMixers.push(mixer);
+
+      if (isCharacterMoving) {
+        if (characterActions.walk) characterActions.walk.play();
+      } else {
+        if (characterActions.idle) characterActions.idle.play();
+        else if (characterActions.walk) characterActions.walk.stop();
+      }
     }
   });
 }
