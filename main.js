@@ -1,829 +1,53 @@
 import * as THREE from 'three';
-import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
-import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
-import { OutlinePass } from 'three/addons/postprocessing/OutlinePass.js';
-import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import {
+  renderer, scene, camera, CAM_STATES, camTarget, composer, outlinePass, visitedOutlinePass,
+  tvLight, lampLight
+} from './js/scene/sceneSetup.js';
+import {
+  initAudio, catSound, clickSound, bushSound, bushRevSound, kbSound, screenUpSound, screenOffSound, playLampSfx, startBgMusic
+} from './js/audio/audioManager.js';
+import { createRoomObjects } from './js/objects/roomObjects.js';
+import { loadCharacterModel, updateCharacterWaypoint, animationMixers, setCharacterMoving } from './js/objects/character.js';
+import { openProjectModal } from './js/ui/projectModal.js';
+import { openExperienceModal } from './js/ui/experienceModal.js';
+import { openContactModal } from './js/ui/contactModal.js';
+import { openSkillTreeModal } from './js/ui/skillTreeModal.js';
+import { modal, closeModal } from './js/ui/modalManager.js';
 
-// ── SETUP ──
-const canvas = document.getElementById('c');
-const renderer = new THREE.WebGLRenderer({ canvas, antialias: false });
-renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5));
-renderer.setSize(window.innerWidth, window.innerHeight);
-renderer.shadowMap.enabled = true;
-renderer.shadowMap.type = THREE.PCFSoftShadowMap;
-renderer.setClearColor(0x1a140e);
+// ── INITIALIZE AUDIO ──
+initAudio(camera);
 
-const scene = new THREE.Scene();
-scene.fog = new THREE.Fog(0x1a140e, 18, 35);
+// ── CREATE ENVIRONMENT & CHARACTER ──
+const room = createRoomObjects();
+loadCharacterModel();
 
-const camera = new THREE.PerspectiveCamera(55, window.innerWidth/window.innerHeight, 0.1, 100);
-
-const CAM_STATES = {
-  MENU:   { pos: new THREE.Vector3(0, 3.5, 12), target: new THREE.Vector3(0, 3.5, -2) },
-  ROOM:   { pos: new THREE.Vector3(0, 3.5, 12), target: new THREE.Vector3(0, 3.5, -2) },
-  LAPTOP: { pos: new THREE.Vector3(2.5, 5.5, 4), target: new THREE.Vector3(0.8, 2.5, 0.3) },
-  PLANT:  { pos: new THREE.Vector3(-3.5, 4.5, 0), target: new THREE.Vector3(-5.8, 3.0, -4) },
-  POSTER: { pos: new THREE.Vector3(1, 4.5, -3.0), target: new THREE.Vector3(1, 4.5, -6.75) },
-};
-camera.position.copy(CAM_STATES.MENU.pos);
-const camTarget = new THREE.Vector3().copy(CAM_STATES.MENU.target);
-camera.lookAt(camTarget);
+// ── APP STATE ──
 let currentState = 'MENU';
-
-// ── LIGHTS (realistic room lighting) ──
-// Low ambient so room isn't uniformly lit
-const ambient = new THREE.AmbientLight(0xccbbaa, 0.15);
-scene.add(ambient);
-// Subtle directional (simulates indirect bounce light)
-const dirLight = new THREE.DirectionalLight(0xffeedd, 0.3);
-dirLight.position.set(4, 12, 6);
-dirLight.castShadow = true;
-dirLight.shadow.mapSize.set(1024, 1024);
-dirLight.shadow.camera.near = 0.1; dirLight.shadow.camera.far = 50;
-dirLight.shadow.camera.left = -12; dirLight.shadow.camera.right = 12;
-dirLight.shadow.camera.top = 12; dirLight.shadow.camera.bottom = -12;
-scene.add(dirLight);
-// TV/monitor glow (cool blue)
-const tvLight = new THREE.PointLight(0x88bbff, 0.6, 5);
-tvLight.position.set(-0.8, 3.5, 0.5); scene.add(tvLight);
-// Desk lamp glow (warm)
-const lampLight = new THREE.PointLight(0xffcc66, 1.2, 6);
-lampLight.position.set(-2.8, 4.0, 0.5); scene.add(lampLight);
-// Window light (daylight warmth)
-const windowLightAmb = new THREE.PointLight(0xffeebb, 0.5, 12);
-windowLightAmb.position.set(7, 4.5, -1); scene.add(windowLightAmb);
-
-// ── MATERIALS (warm clean aesthetic) ──
-const M = {
-  floor: new THREE.MeshLambertMaterial({ color: 0x2a2018 }),
-  floorLine: new THREE.MeshLambertMaterial({ color: 0x352a1e }),
-  wall: new THREE.MeshLambertMaterial({ color: 0xe8e0d4 }),
-  wallAcc: new THREE.MeshLambertMaterial({ color: 0xd4ccc0 }),
-  desk: new THREE.MeshLambertMaterial({ color: 0xf0ece6 }),
-  deskTop: new THREE.MeshLambertMaterial({ color: 0xfafafa }),
-  tv: new THREE.MeshLambertMaterial({ color: 0x1a1a22 }),
-  tvScreen: new THREE.MeshLambertMaterial({ color: 0x1155aa, emissive: 0x1144cc, emissiveIntensity: 0.8 }),
-  bookA: new THREE.MeshLambertMaterial({ color: 0xaa3355 }),
-  bookB: new THREE.MeshLambertMaterial({ color: 0x3355aa }),
-  bookC: new THREE.MeshLambertMaterial({ color: 0x33aa55 }),
-  bookD: new THREE.MeshLambertMaterial({ color: 0xaaaa33 }),
-  plant: new THREE.MeshLambertMaterial({ color: 0x2d6e3a }),
-  pot: new THREE.MeshLambertMaterial({ color: 0x8b4513 }),
-  laptop: new THREE.MeshStandardMaterial({ color: 0x050505, roughness: 0.9, metalness: 0.1 }),
-  lapScreen: new THREE.MeshLambertMaterial({ color: 0x88ff88, emissive: 0x44ff44, emissiveIntensity: 0.5 }),
-  chair: new THREE.MeshLambertMaterial({ color: 0x2a1a0a }),
-  chairCushion: new THREE.MeshLambertMaterial({ color: 0x553311 }),
-  rug: new THREE.MeshLambertMaterial({ color: 0x3d2050 }),
-  rugAcc: new THREE.MeshLambertMaterial({ color: 0x5a3570 }),
-  shelf: new THREE.MeshLambertMaterial({ color: 0x3a2a18 }),
-  poster: new THREE.MeshLambertMaterial({ color: 0x0a1a1a, emissive: 0x003322, emissiveIntensity: 0.3 }),
-  lamp: new THREE.MeshLambertMaterial({ color: 0xccccaa }),
-  lampShade: new THREE.MeshLambertMaterial({ color: 0xffdd88, emissive: 0xffcc44, emissiveIntensity: 0.6 }),
-  pixel: new THREE.MeshLambertMaterial({ color: 0xb8ff8c, emissive: 0x44aa22, emissiveIntensity: 0.4 }),
-  white: new THREE.MeshLambertMaterial({ color: 0xfafafa }),
-  skin: new THREE.MeshLambertMaterial({ color: 0xe8b87a }),
-  hoodie: new THREE.MeshLambertMaterial({ color: 0x3a4050 }),
-  pants: new THREE.MeshLambertMaterial({ color: 0x2a2a3a }),
-  hair: new THREE.MeshLambertMaterial({ color: 0x1a1a1a }),
-  // new peripherals
-  keyboard: new THREE.MeshLambertMaterial({ color: 0xf0f0f0 }),
-  keycap: new THREE.MeshLambertMaterial({ color: 0xe0e0e0 }),
-  mousepad: new THREE.MeshLambertMaterial({ color: 0x111111 }),
-  mouseMat: new THREE.MeshLambertMaterial({ color: 0xf5f5f5 }),
-  piano: new THREE.MeshLambertMaterial({ color: 0x111116 }),
-  pianoKeyWhite: new THREE.MeshLambertMaterial({ color: 0xf4f1e8 }),
-  pianoKeyBlack: new THREE.MeshLambertMaterial({ color: 0x050505 }),
-  windowFrame: new THREE.MeshLambertMaterial({ color: 0xd0c8b8 }),
-  windowGlass: new THREE.MeshLambertMaterial({ color: 0x73b7f2, transparent: true, opacity: 0.42, emissive: 0x1d5f9f, emissiveIntensity: 0.12 }),
-};
-
-function box(w,h,d, mat, x=0,y=0,z=0, castShadow=true) {
-  const m = new THREE.Mesh(new THREE.BoxGeometry(w,h,d), mat);
-  m.position.set(x,y,z);
-  if (castShadow) { m.castShadow=true; m.receiveShadow=true; }
-  scene.add(m);
-  return m;
-}
-
-const gltfLoader = new GLTFLoader();
-const animationMixers = [];
-const characterActions = { idle: null, walk: null };
-let characterAnimState = 'idle';
-
-function setCharacterMoving(isMoving) {
-  const nextState = isMoving ? 'walk' : 'idle';
-  if (characterAnimState === nextState) return;
-  characterAnimState = nextState;
-
-  const walk = characterActions.walk;
-  const idle = characterActions.idle;
-  if (isMoving) {
-    if (idle) idle.fadeOut(0.18);
-    if (walk) walk.reset().fadeIn(0.18).play();
-  } else {
-    if (walk) walk.fadeOut(0.18);
-    if (idle) idle.reset().fadeIn(0.18).play();
-  }
-}
-
-function prepModel(root) {
-  root.traverse(obj => {
-    if (obj.isMesh) {
-      obj.castShadow = true;
-      obj.receiveShadow = true;
-      if (obj.material && 'fog' in obj.material) obj.material.fog = true;
-    }
-  });
-}
-
-function fitModelToHeight(root, targetHeight) {
-  root.updateMatrixWorld(true);
-  const box = new THREE.Box3().setFromObject(root);
-  const size = box.getSize(new THREE.Vector3());
-  if (size.y > 0) {
-    root.scale.multiplyScalar(targetHeight / size.y);
-  }
-  root.updateMatrixWorld(true);
-  const fittedBox = new THREE.Box3().setFromObject(root);
-  root.position.y += -fittedBox.min.y;
-}
-// ── ROOM GEOMETRY ──
-const floor = box(16, 0.2, 14, M.floor, 0, -0.1, 0, false);
-floor.receiveShadow = true;
-for (let i=-7;i<=7;i++) {
-  box(16, 0.01, 0.05, M.floorLine, 0, 0.01, i, false);
-  box(0.05, 0.01, 14, M.floorLine, i, 0.01, 0, false);
-}
-// Full-floor rug (above grid lines)
-box(15.6, 0.06, 13.6, M.rug, 0, 0.03, 0, false);
-box(15.2, 0.06, 0.2, M.rugAcc, 0, 0.04, 6.6, false);
-box(15.2, 0.06, 0.2, M.rugAcc, 0, 0.04, -6.6, false);
-box(0.2, 0.06, 13.6, M.rugAcc, 7.6, 0.04, 0, false);
-box(0.2, 0.06, 13.6, M.rugAcc, -7.6, 0.04, 0, false);
-box(16, 10, 0.2, M.wall, 0, 4, -7, false);
-box(0.2, 10, 14, M.wall, -8, 4, 0, false);
-box(0.2, 10, 14, M.wall,  8, 4, 0, false);
-box(16, 0.15, 0.1, M.wallAcc, 0, 3.5, -6.9, false);
-box(16, 0.2, 14, M.wall, 0, 8, 0, false);
-
-// ── WINDOW on RIGHT WALL ──
-const windowGroup = new THREE.Group(); windowGroup.position.set(7.85, 4.0, -1); windowGroup.rotation.y = -Math.PI/2; scene.add(windowGroup);
-// Window frame
-const wFrame = new THREE.Mesh(new THREE.BoxGeometry(3.0, 3.5, 0.12), M.windowFrame); windowGroup.add(wFrame);
-// Glass panes
-const wGlass1 = new THREE.Mesh(new THREE.BoxGeometry(1.3, 1.5, 0.04), M.windowGlass); wGlass1.position.set(-0.7, 0.4, 0.05); windowGroup.add(wGlass1);
-const wGlass2 = new THREE.Mesh(new THREE.BoxGeometry(1.3, 1.5, 0.04), M.windowGlass); wGlass2.position.set(0.7, 0.4, 0.05); windowGroup.add(wGlass2);
-const wGlass3 = new THREE.Mesh(new THREE.BoxGeometry(1.3, 1.5, 0.04), M.windowGlass); wGlass3.position.set(-0.7, -1.1, 0.05); windowGroup.add(wGlass3);
-const wGlass4 = new THREE.Mesh(new THREE.BoxGeometry(1.3, 1.5, 0.04), M.windowGlass); wGlass4.position.set(0.7, -1.1, 0.05); windowGroup.add(wGlass4);
-// Cross dividers
-const wDivH = new THREE.Mesh(new THREE.BoxGeometry(2.8, 0.1, 0.14), M.windowFrame); wDivH.position.set(0, -0.3, 0); windowGroup.add(wDivH);
-const wDivV = new THREE.Mesh(new THREE.BoxGeometry(0.1, 3.3, 0.14), M.windowFrame); wDivV.position.set(0, 0, 0); windowGroup.add(wDivV);
-// Window sill
-const wSill = new THREE.Mesh(new THREE.BoxGeometry(3.2, 0.1, 0.4), M.windowFrame); wSill.position.set(0, -1.7, 0.15); windowGroup.add(wSill);
-
-// ── AIR CONDITIONER (Above Window) ──
-const acGroup = new THREE.Group();
-acGroup.position.set(7.8, 6.5, -1);
-scene.add(acGroup);
-const acBody = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.8, 2.4), new THREE.MeshLambertMaterial({color: 0xffffff}));
-acGroup.add(acBody);
-const acVent = new THREE.Mesh(new THREE.BoxGeometry(0.52, 0.1, 2.2), new THREE.MeshLambertMaterial({color: 0x222222}));
-acVent.position.set(-0.02, -0.25, 0);
-acGroup.add(acVent);
-
-// Warm ambient light from window
-const windowLight = new THREE.PointLight(0xffeedd, 0.5, 12);
-windowLight.position.set(6.5, 4.0, -1); scene.add(windowLight);
-
-// ── SINGLE WINDOW BEAM ──
-const paneBeamMat = new THREE.MeshBasicMaterial({
-  color: 0xfffbf0, transparent: true, opacity: 0.04, side: THREE.DoubleSide, depthWrite: false, blending: THREE.AdditiveBlending
-});
-// Create custom sheared volumetric beam so it fits the window perfectly without awkward rotations
-const dir = new THREE.Vector3(-4.35, -3.55, 1.4); // directional vector from window to floor near right desk leg
-const floorY = 0.1;
-const wCorners = [
-  new THREE.Vector3(7.85, 5.15, -2.35), // Top-Left
-  new THREE.Vector3(7.85, 5.15, 0.35),  // Top-Right
-  new THREE.Vector3(7.85, 2.15, -2.35), // Bottom-Left
-  new THREE.Vector3(7.85, 2.15, 0.35),  // Bottom-Right
-];
-const vertices = [];
-wCorners.forEach(v => vertices.push(v.x, v.y, v.z));
-wCorners.forEach(v => {
-  const t = (floorY - v.y) / dir.y;
-  vertices.push(v.x + t * dir.x, floorY, v.z + t * dir.z);
-});
-const indices = [
-  0, 2, 1,  2, 3, 1, // Front
-  4, 5, 6,  6, 5, 7, // Back
-  0, 4, 2,  2, 4, 6, // Left
-  1, 3, 5,  3, 7, 5, // Right
-  0, 1, 4,  1, 5, 4, // Top
-  2, 6, 3,  3, 6, 7  // Bottom
-];
-const bGeo = new THREE.BufferGeometry();
-bGeo.setAttribute('position', new THREE.BufferAttribute(new Float32Array(vertices), 3));
-bGeo.setIndex(indices);
-const bMesh = new THREE.Mesh(bGeo, paneBeamMat);
-scene.add(bMesh);
-
-const beamTarget = new THREE.Vector3(3.5, 0.1, 0.4);
-const sunSpot = new THREE.SpotLight(0xfff8ee, 1.5, 20, Math.PI/4, 0.8, 1.5);
-sunSpot.position.set(7.5, 4.0, -1);
-sunSpot.target.position.copy(beamTarget);
-scene.add(sunSpot); scene.add(sunSpot.target);
-
-// ── OUTSIDE SCENERY ──
-const sceneryGroup = new THREE.Group();
-sceneryGroup.position.set(12, 0, -1); // Outside the window, within fog range
-scene.add(sceneryGroup);
-
-// Set fog: false so they don't get covered by the dark room fog
-const skyMat = new THREE.MeshBasicMaterial({ color: 0x88ccff, fog: false });
-const sunMat = new THREE.MeshBasicMaterial({ color: 0xfff4aa, fog: false });
-const buildMat1 = new THREE.MeshBasicMaterial({ color: 0x77aacc, fog: false });
-const buildMat2 = new THREE.MeshBasicMaterial({ color: 0x6699bb, fog: false });
-const cloudMat = new THREE.MeshBasicMaterial({ color: 0xffffff, fog: false });
-
-// Sky backdrop
-const sky = new THREE.Mesh(new THREE.BoxGeometry(0.5, 40, 60), skyMat);
-sky.position.set(2, 10, 0);
-sceneryGroup.add(sky);
-
-// Sun
-const sun = new THREE.Mesh(new THREE.BoxGeometry(0.6, 5, 5), sunMat);
-sun.position.set(1, 16, -6);
-sceneryGroup.add(sun);
-
-// Distant Buildings
-const b1 = new THREE.Mesh(new THREE.BoxGeometry(1, 20, 6), buildMat1);
-b1.position.set(1, 0, -8);
-sceneryGroup.add(b1);
-
-const b2 = new THREE.Mesh(new THREE.BoxGeometry(1, 28, 5), buildMat2);
-b2.position.set(1, 4, -1);
-sceneryGroup.add(b2);
-
-const b3 = new THREE.Mesh(new THREE.BoxGeometry(1, 16, 7), buildMat1);
-b3.position.set(1, -2, 7);
-sceneryGroup.add(b3);
-
-// Clouds (pixelated style)
-const c1 = new THREE.Mesh(new THREE.BoxGeometry(0.6, 2.5, 8), cloudMat);
-c1.position.set(1.5, 16, -4);
-sceneryGroup.add(c1);
-
-const c2 = new THREE.Mesh(new THREE.BoxGeometry(0.6, 3, 10), cloudMat);
-c2.position.set(1.5, 14, 5);
-sceneryGroup.add(c2);
-
-// Merged convergence glow where all 4 beams land
-const beamMergeGlow = new THREE.PointLight(0xfff8ee, 0.4, 6);
-beamMergeGlow.position.set(3.5, 1.5, -1); scene.add(beamMergeGlow);
-
-// ── CEILING BULB (white light, main room illumination) ──
-const ceilingBulbG = new THREE.Group(); ceilingBulbG.position.set(0, 7.6, 0); scene.add(ceilingBulbG);
-// Wire
-const cWire = new THREE.Mesh(new THREE.CylinderGeometry(0.02, 0.02, 0.6, 4), new THREE.MeshLambertMaterial({color:0x333333}));
-cWire.position.y = -0.1; ceilingBulbG.add(cWire);
-// Bulb (glowing)
-const cBulb = new THREE.Mesh(new THREE.SphereGeometry(0.15, 8, 8), new THREE.MeshLambertMaterial({color:0xffffee, emissive:0xffffdd, emissiveIntensity:0.0}));
-cBulb.position.y = -0.45; ceilingBulbG.add(cBulb);
-// Shade/fixture
-const cShade = new THREE.Mesh(new THREE.CylinderGeometry(0.3, 0.1, 0.12, 8), new THREE.MeshLambertMaterial({color:0x222222}));
-cShade.position.y = -0.35; ceilingBulbG.add(cShade);
-// White ceiling light (main fill)
-const ceilingLight = new THREE.PointLight(0xffffff, 0, 18);
-ceilingLight.position.set(0, 5.8, 0); ceilingLight.castShadow = false; scene.add(ceilingLight);
-// Ceiling lamp wall projections — cone of light spreading down
-const ceilSpotDown = new THREE.SpotLight(0xffffff, 0, 12, Math.PI * 0.42, 0.5, 1.0);
-ceilSpotDown.position.set(0, 7.4, 0);
-ceilSpotDown.target.position.set(0, 0, 0);
-ceilSpotDown.castShadow = false;
-scene.add(ceilSpotDown); scene.add(ceilSpotDown.target);
-ceilingBulbG.userData = { clickable: true, id: 'lamp', on: false, toggleLight: ceilingLight, toggleSpot: ceilSpotDown, mat: cBulb.material, emissiveOn: 0.9, baseLightInt: 2.3, baseSpotInt: 2.8 };
-
-// ── FLOOR LAMP LEFT (standing lamp near left wall) ──
-const floorLampL = new THREE.Group(); floorLampL.position.set(-7, 0, 1); scene.add(floorLampL);
-// Base
-const flBase = new THREE.Mesh(new THREE.CylinderGeometry(0.3, 0.35, 0.1, 8), new THREE.MeshLambertMaterial({color:0x2a2a2a}));
-flBase.position.y = 0.05; floorLampL.add(flBase);
-// Pole
-const flPole = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.04, 4.5, 6), new THREE.MeshLambertMaterial({color:0x888888}));
-flPole.position.y = 2.3; floorLampL.add(flPole);
-// Shade
-const flShade = new THREE.Mesh(new THREE.CylinderGeometry(0.35, 0.5, 0.6, 8), new THREE.MeshLambertMaterial({color:0xf5e8d0, emissive:0xffcc88, emissiveIntensity:0.4}));
-flShade.position.y = 4.6; floorLampL.add(flShade);
-// Left floor lamp light (warm point)
-const flLightL = new THREE.PointLight(0xffcc88, 1.2, 11);
-flLightL.position.set(-7, 4.8, 1); scene.add(flLightL);
-// Left lamp wall projection (spreads down + onto nearby wall)
-const flSpotL = new THREE.SpotLight(0xffcc66, 1.4, 8, Math.PI * 0.38, 0.5, 1.4);
-flSpotL.position.set(-7, 4.75, 1);
-flSpotL.target.position.set(-7, 0, 1);
-flSpotL.castShadow = false;
-scene.add(flSpotL); scene.add(flSpotL.target);
-floorLampL.userData = { clickable: true, id: 'lamp', on: true, toggleLight: flLightL, toggleSpot: flSpotL, mat: flShade.material, emissiveOn: 0.4, baseLightInt: 1.2, baseSpotInt: 1.4 };
-
-// ── FLOOR LAMP RIGHT (standing lamp near right wall) ──
-const floorLampR = new THREE.Group(); floorLampR.position.set(7, 0, 2); scene.add(floorLampR);
-// Base
-const frBase = new THREE.Mesh(new THREE.CylinderGeometry(0.3, 0.35, 0.1, 8), new THREE.MeshLambertMaterial({color:0x2a2a2a}));
-frBase.position.y = 0.05; floorLampR.add(frBase);
-// Pole
-const frPole = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.04, 4.5, 6), new THREE.MeshLambertMaterial({color:0x888888}));
-frPole.position.y = 2.3; floorLampR.add(frPole);
-// Shade
-const frShade = new THREE.Mesh(new THREE.CylinderGeometry(0.35, 0.5, 0.6, 8), new THREE.MeshLambertMaterial({color:0xf5e8d0, emissive:0xffcc88, emissiveIntensity:0.4}));
-frShade.position.y = 4.6; floorLampR.add(frShade);
-// Right floor lamp light (warm point)
-const flLightR = new THREE.PointLight(0xffcc88, 1.2, 11);
-flLightR.position.set(7, 4.8, 2); scene.add(flLightR);
-// Right lamp wall projection (spreads down + onto nearby wall)
-const flSpotR = new THREE.SpotLight(0xffcc66, 1.4, 8, Math.PI * 0.38, 0.5, 1.4);
-flSpotR.position.set(7, 4.75, 2);
-flSpotR.target.position.set(7, 0, 2);
-flSpotR.castShadow = false;
-scene.add(flSpotR); scene.add(flSpotR.target);
-floorLampR.userData = { clickable: true, id: 'lamp', on: true, toggleLight: flLightR, toggleSpot: flSpotR, mat: frShade.material, emissiveOn: 0.4, baseLightInt: 1.2, baseSpotInt: 1.4 };
-
-// ── MUSIC KEYBOARD (fills the quiet left side) ──
-const musicKeyboardG = new THREE.Group();
-musicKeyboardG.position.set(-7.35, 0, -2.0);
-musicKeyboardG.rotation.y = Math.PI / 2;
-musicKeyboardG.scale.setScalar(1.2);
-scene.add(musicKeyboardG);
-
-const pianoBody = new THREE.Mesh(new THREE.BoxGeometry(3.1, 0.22, 0.62), M.piano);
-pianoBody.position.set(0, 1.36, 0);
-pianoBody.castShadow = true;
-pianoBody.receiveShadow = true;
-musicKeyboardG.add(pianoBody);
-
-const pianoTop = new THREE.Mesh(new THREE.BoxGeometry(3.2, 0.08, 0.7), new THREE.MeshLambertMaterial({ color: 0x20202a }));
-pianoTop.position.set(0, 1.52, -0.02);
-pianoTop.castShadow = true;
-musicKeyboardG.add(pianoTop);
-
-const pianoKeyBed = new THREE.Mesh(new THREE.BoxGeometry(2.8, 0.04, 0.34), new THREE.MeshLambertMaterial({ color: 0xd8d2c7 }));
-pianoKeyBed.position.set(0, 1.51, 0.2);
-musicKeyboardG.add(pianoKeyBed);
-
-for (let i = 0; i < 21; i++) {
-  const key = new THREE.Mesh(new THREE.BoxGeometry(0.11, 0.035, 0.3), M.pianoKeyWhite);
-  key.position.set(-1.32 + i * 0.132, 1.55, 0.21);
-  musicKeyboardG.add(key);
-}
-
-for (let i = 0; i < 18; i++) {
-  if ([2, 6, 9, 13, 16].includes(i % 17)) continue;
-  const blackKey = new THREE.Mesh(new THREE.BoxGeometry(0.075, 0.055, 0.18), M.pianoKeyBlack);
-  blackKey.position.set(-1.25 + i * 0.132, 1.59, 0.12);
-  musicKeyboardG.add(blackKey);
-}
-
-const musicRest = new THREE.Mesh(new THREE.BoxGeometry(1.25, 0.72, 0.06), new THREE.MeshLambertMaterial({ color: 0x191923 }));
-musicRest.position.set(0, 2.0, -0.22);
-musicRest.rotation.x = -0.25;
-musicRest.castShadow = true;
-musicKeyboardG.add(musicRest);
-
-const restLip = new THREE.Mesh(new THREE.BoxGeometry(1.35, 0.06, 0.08), M.piano);
-restLip.position.set(0, 1.63, -0.08);
-musicKeyboardG.add(restLip);
-
-[[-1.3, -0.22], [1.3, -0.22], [-1.3, 0.25], [1.3, 0.25]].forEach(([x, z]) => {
-  const leg = new THREE.Mesh(new THREE.CylinderGeometry(0.035, 0.045, 1.3, 6), M.piano);
-  leg.position.set(x, 0.68, z);
-  leg.castShadow = true;
-  musicKeyboardG.add(leg);
-});
-
-const pedalBar = new THREE.Mesh(new THREE.BoxGeometry(1.0, 0.06, 0.08), new THREE.MeshLambertMaterial({ color: 0x333333 }));
-pedalBar.position.set(0, 0.16, 0.33);
-musicKeyboardG.add(pedalBar);
-[-0.18, 0, 0.18].forEach(x => {
-  const pedal = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.03, 0.18), new THREE.MeshLambertMaterial({ color: 0xaaaa88 }));
-  pedal.position.set(x, 0.11, 0.42);
-  musicKeyboardG.add(pedal);
-});
-
-// ── DESK (white, open knee space) ──
-const deskGroup = new THREE.Group(); scene.add(deskGroup);
-// Desktop surface
-const deskTopM = new THREE.Mesh(new THREE.BoxGeometry(7, 0.15, 2.2), M.deskTop);
-deskTopM.position.set(0, 2.5, 0.4); deskTopM.castShadow=true; deskTopM.receiveShadow=true; deskGroup.add(deskTopM);
-// Left panel (side wall)
-const deskSideL = new THREE.Mesh(new THREE.BoxGeometry(0.12, 2.3, 2.0), M.desk);
-deskSideL.position.set(-3.44, 1.25, 0.4); deskSideL.castShadow=true; deskGroup.add(deskSideL);
-// Right panel (side wall)
-const deskSideR = new THREE.Mesh(new THREE.BoxGeometry(0.12, 2.3, 2.0), M.desk);
-deskSideR.position.set(3.44, 1.25, 0.4); deskSideR.castShadow=true; deskGroup.add(deskSideR);
-// Back panel (behind knee space)
-const deskBackP = new THREE.Mesh(new THREE.BoxGeometry(6.8, 2.3, 0.1), M.desk);
-deskBackP.position.set(0, 1.25, -0.55); deskGroup.add(deskBackP);
-// Right cabinet (drawer section)
-const deskCab = new THREE.Mesh(new THREE.BoxGeometry(2.0, 2.3, 1.9), M.desk);
-deskCab.position.set(2.4, 1.25, 0.45); deskCab.castShadow=true; deskGroup.add(deskCab);
-// Drawer face
-const drawer = new THREE.Mesh(new THREE.BoxGeometry(1.8, 0.5, 0.05), M.deskTop);
-drawer.position.set(2.4, 1.6, 1.41); deskGroup.add(drawer);
-const drawerKnob = new THREE.Mesh(new THREE.BoxGeometry(0.15, 0.15, 0.1), M.lamp);
-drawerKnob.position.set(2.4, 1.6, 1.47); deskGroup.add(drawerKnob);
-// Second drawer
-const drawer2 = new THREE.Mesh(new THREE.BoxGeometry(1.8, 0.5, 0.05), M.deskTop);
-drawer2.position.set(2.4, 0.9, 1.41); deskGroup.add(drawer2);
-const drawerKnob2 = new THREE.Mesh(new THREE.BoxGeometry(0.15, 0.15, 0.1), M.lamp);
-drawerKnob2.position.set(2.4, 0.9, 1.47); deskGroup.add(drawerKnob2);
-// Bottom support bar
-const deskBar = new THREE.Mesh(new THREE.BoxGeometry(4.5, 0.1, 0.1), M.desk);
-deskBar.position.set(-0.5, 0.15, 0.4); deskGroup.add(deskBar);
-
-// ── MOUSEPAD (black, long) ──
-const mousepad = new THREE.Mesh(new THREE.BoxGeometry(5.5, 0.02, 1.4), M.mousepad);
-mousepad.position.set(0, 2.59, 0.3); deskGroup.add(mousepad);
-// mousepad edge stitching
-const mpEdge = new THREE.Mesh(new THREE.BoxGeometry(5.6, 0.025, 0.05), new THREE.MeshLambertMaterial({color:0x333333}));
-mpEdge.position.set(0, 2.59, 1.0); deskGroup.add(mpEdge);
-const mpEdge2 = new THREE.Mesh(new THREE.BoxGeometry(5.6, 0.025, 0.05), new THREE.MeshLambertMaterial({color:0x333333}));
-mpEdge2.position.set(0, 2.59, -0.4); deskGroup.add(mpEdge2);
-
-// ── KEYBOARD (white, in front of monitor, not overlapping laptop) ──
-const kbGroup = new THREE.Group(); kbGroup.position.set(-1.5, 2.6, 0.9); deskGroup.add(kbGroup);
-const kbBase = new THREE.Mesh(new THREE.BoxGeometry(1.8, 0.06, 0.6), M.keyboard);
-kbGroup.add(kbBase);
-// Keycap rows
-for(let row=0; row<4; row++) for(let col=0; col<14; col++) {
-  const key = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.04, 0.1), M.keycap);
-  key.position.set(-0.78+col*0.12, 0.05, -0.2+row*0.14);
-  kbGroup.add(key);
-}
-// Space bar
-const spaceBar = new THREE.Mesh(new THREE.BoxGeometry(0.6, 0.04, 0.1), M.keycap);
-spaceBar.position.set(0, 0.05, 0.22); kbGroup.add(spaceBar);
-
-// ── MOUSE (white) ──
-const mouseGroup = new THREE.Group(); mouseGroup.position.set(1.8, 2.6, 0.6); deskGroup.add(mouseGroup);
-const mouseBody = new THREE.Mesh(new THREE.BoxGeometry(0.18, 0.08, 0.3), M.mouseMat);
-mouseGroup.add(mouseBody);
-const mouseWheel = new THREE.Mesh(new THREE.BoxGeometry(0.04, 0.03, 0.08), new THREE.MeshLambertMaterial({color:0xcccccc}));
-mouseWheel.position.set(0, 0.05, -0.05); mouseGroup.add(mouseWheel);
-
-// ── LAPTOP (CLICKABLE, matte black so white glow pops) ──
-const laptopGroup = new THREE.Group();
-laptopGroup.position.set(0.8, 2.58, 0.3); scene.add(laptopGroup);
-const lapBase = new THREE.Mesh(new THREE.BoxGeometry(1.4, 0.06, 1), M.laptop);
-lapBase.castShadow=true; laptopGroup.add(lapBase);
-const lapLid = new THREE.Mesh(new THREE.BoxGeometry(1.4, 0.9, 0.05), M.laptop);
-lapLid.position.set(0, 0.45, -0.5); lapLid.rotation.x=-0.4; lapLid.castShadow=true; laptopGroup.add(lapLid);
-const lapScreen = new THREE.Mesh(new THREE.BoxGeometry(1.3, 0.8, 0.01), M.lapScreen);
-lapScreen.position.set(0, 0.46, -0.49); lapScreen.rotation.x=-0.4; laptopGroup.add(lapScreen);
-laptopGroup.userData = { clickable: true, id: 'laptop', label: "\uD83D\uDCBB OLAN'S PROJECTS \u00B7 Click to view" };
-
-// ── DESK LAMP (far left of wider desk) ──
-const lampG = new THREE.Group(); lampG.position.set(-2.8, 2.58, 0.2); scene.add(lampG);
-lampG.add(new THREE.Mesh(new THREE.CylinderGeometry(0.18,0.22,0.08,8), M.lamp));
-const lampPole = new THREE.Mesh(new THREE.CylinderGeometry(0.04,0.04,1.2,6), M.lamp);
-lampPole.position.set(0, 0.64, 0); lampG.add(lampPole);
-const lampHead = new THREE.Mesh(new THREE.CylinderGeometry(0.28,0.18,0.25,8), M.lampShade);
-lampHead.position.set(0, 1.28, 0); lampG.add(lampHead);
-
-// ── MONITOR on desk (next to laptop) ──
-const tvGroup = new THREE.Group(); tvGroup.position.set(-1.5, 2.58, -0.1); scene.add(tvGroup);
-// Monitor screen
-const tvBody = new THREE.Mesh(new THREE.BoxGeometry(1.8, 1.2, 0.1), M.tv);
-tvBody.position.set(0, 0.7, 0); tvBody.castShadow=true; tvGroup.add(tvBody);
-const tvScreen = new THREE.Mesh(new THREE.BoxGeometry(1.6, 1.0, 0.02), M.tvScreen);
-tvScreen.position.set(0, 0.7, 0.06); tvGroup.add(tvScreen);
-// pixel detail on screen
-for(let row=0;row<2;row++) for(let col=0;col<3;col++) {
-  const pixel = new THREE.Mesh(new THREE.BoxGeometry(0.4, 0.35, 0.02),
-    new THREE.MeshLambertMaterial({ color: [0x2255bb,0x3366cc,0x1144aa][col%3], emissive:0x1133aa, emissiveIntensity:0.4 }));
-  pixel.position.set(-0.42+col*0.42, 0.88-row*0.42, 0.08); tvGroup.add(pixel);
-}
-// Monitor stand
-const tvStand = new THREE.Mesh(new THREE.BoxGeometry(0.15, 0.35, 0.15), M.tv);
-tvStand.position.set(0, 0.18, 0); tvGroup.add(tvStand);
-const tvBase2 = new THREE.Mesh(new THREE.BoxGeometry(0.8, 0.06, 0.4), M.tv);
-tvBase2.position.set(0, 0.0, 0); tvGroup.add(tvBase2);
-tvGroup.userData = { clickable: false, id: 'monitor', label: '' };
-
-// ── BOOKSHELF (CLICKABLE) — shifted left ──
-const shelfGroup = new THREE.Group(); shelfGroup.position.set(5, 0, -4); scene.add(shelfGroup);
-const shelfBack = new THREE.Mesh(new THREE.BoxGeometry(2.8, 5, 0.1), M.shelf);
-shelfBack.position.set(0, 2.5, -0.5); shelfBack.castShadow=true; shelfGroup.add(shelfBack);
-const shelfSideL = new THREE.Mesh(new THREE.BoxGeometry(0.1, 5, 1), M.shelf);
-shelfSideL.position.set(-1.4, 2.5, 0); shelfGroup.add(shelfSideL);
-const shelfSideR = new THREE.Mesh(new THREE.BoxGeometry(0.1, 5, 1), M.shelf);
-shelfSideR.position.set(1.4, 2.5, 0); shelfGroup.add(shelfSideR);
-[0.8,1.9,3.0,4.1].forEach(y => { const s=new THREE.Mesh(new THREE.BoxGeometry(2.8,0.1,1),M.shelf); s.position.set(0,y,0); shelfGroup.add(s); });
-const bookColors=[M.bookA,M.bookB,M.bookC,M.bookD], bookW=[0.2,0.25,0.18,0.22,0.2,0.24,0.19,0.23];
-[1.05,2.15,3.25].forEach((y,ri) => { let x=-1.1; bookW.forEach((w,bi) => {
-  const h = 0.7+Math.random()*0.3;
-  const bk=new THREE.Mesh(new THREE.BoxGeometry(w,h,0.7),bookColors[(ri+bi)%4]);
-  bk.position.set(x+w/2, 0.85 + ri*1.1 + h/2, -0.1); bk.castShadow=true; shelfGroup.add(bk); x+=w+0.02; if(x>1.1) return;
-}); });
-shelfGroup.userData = { clickable: true, id: 'shelf', label: '\uD83D\uDCDA BOOKSHELF \u2014 HOBBY' };
-
-// ── PLANTS (pure green, taller) ──
-const plantG = new THREE.Group(); plantG.position.set(-5.8, 0, -4); scene.add(plantG);
-const pot = new THREE.Mesh(new THREE.CylinderGeometry(0.55,0.4,0.8,8), M.pot); pot.position.y=0.4; plantG.add(pot);
-const soil = new THREE.Mesh(new THREE.CylinderGeometry(0.5,0.5,0.08,8), new THREE.MeshLambertMaterial({color:0x3a2a1a})); soil.position.y=0.82; plantG.add(soil);
-// trunk (taller)
-const trunk = new THREE.Mesh(new THREE.CylinderGeometry(0.08,0.1,2.0,6), new THREE.MeshLambertMaterial({color:0x4a3520}));
-trunk.position.y=1.8; plantG.add(trunk);
-// big foliage cluster (pure green gradients, higher)
-const greenShades = [0x1a6b2a, 0x228833, 0x2a9e3c, 0x1e7a2e, 0x33aa44, 0x267a30, 0x1f8832, 0x2d9940, 0x1a7028, 0x35b048];
-[[0,3.2,0,0.55],[0.4,2.8,0.15,0.45],[-0.4,2.8,-0.15,0.45],[0.15,3.5,0.2,0.4],[-0.2,3.4,-0.2,0.4],
- [0.35,3.6,0,0.35],[-0.3,3.7,0.1,0.32],[0,3.9,0,0.3],[0.25,2.5,0.2,0.35],[-0.35,2.6,-0.1,0.38],
- [0,4.1,0,0.22],[0.2,4.0,-0.1,0.25]].forEach(([x,y,z,r],i) => {
-  const leaf=new THREE.Mesh(new THREE.SphereGeometry(r,6,6),
-    new THREE.MeshLambertMaterial({color:greenShades[i % greenShades.length]}));
-  leaf.position.set(x,y,z); leaf.scale.set(1,1.2,1); leaf.castShadow=true; plantG.add(leaf);
-});
-plantG.userData = { clickable: true, id: 'plant', label: '\uD83C\uDF31 SKILL TREE \u2014 Click to view' };
-// Second smaller plant (pure green)
-const plant2 = new THREE.Group(); plant2.position.set(-5.5, 0, 3); scene.add(plant2);
-const pot2 = new THREE.Mesh(new THREE.CylinderGeometry(0.35,0.25,0.5,8), M.pot); pot2.position.y=0.25; plant2.add(pot2);
-[[0,0.8,0,0.3],[0.2,0.65,0.1,0.25],[-0.2,0.7,-0.1,0.25],[0,1.0,0,0.2]].forEach(([x,y,z,r],i) => {
-  const lf=new THREE.Mesh(new THREE.SphereGeometry(r,5,5),
-    new THREE.MeshLambertMaterial({color:[0x1f7e30, 0x2a9940, 0x1a6a28, 0x33aa44][i]}));
-  lf.position.set(x,y,z); lf.castShadow=true; plant2.add(lf);
-});
-
-// ── POSTER on back wall (CLICKABLE) — pushed forward to clear wall trim ──
-const posterGroup = new THREE.Group(); posterGroup.position.set(1, 4.5, -6.75); scene.add(posterGroup);
-const posterBg = new THREE.Mesh(new THREE.BoxGeometry(2, 2.8, 0.05), M.poster); posterGroup.add(posterBg);
-const posterColors=[0xffd080,0x88ccff,0xff88aa,0xffdd66,0x88ffcc,0xff88cc,0x88aaff,0xffd080];
-for(let r=0;r<4;r++) for(let c=0;c<4;c++) {
-  const dot=new THREE.Mesh(new THREE.BoxGeometry(0.3,0.3,0.04),
-    new THREE.MeshLambertMaterial({color:posterColors[(r*4+c)%8],emissive:posterColors[(r*4+c)%8],emissiveIntensity:0.3}));
-  dot.position.set(-0.6+c*0.4,0.5-r*0.4+0.6,0.04); posterGroup.add(dot);
-}
-const frame=new THREE.Mesh(new THREE.BoxGeometry(2.2,3,0.04),new THREE.MeshLambertMaterial({color:0x2a1a0a}));
-frame.position.z=-0.04; posterGroup.add(frame);
-posterGroup.userData = { clickable: true, id: 'poster', label: '\uD83C\uDFA8 POSTER \u2014 CONTACT' };
-
-// ── ONE PIECE POSTER on LEFT WALL (using actual image) ──
-const opTexture = new THREE.TextureLoader().load('onepiece.jpg');
-opTexture.colorSpace = THREE.SRGBColorSpace;
-const opPoster = new THREE.Group(); opPoster.position.set(-7.85, 3.8, -3); opPoster.rotation.y = Math.PI/2; scene.add(opPoster);
-// Image poster
-const opBg = new THREE.Mesh(
-  new THREE.BoxGeometry(2.4, 3.2, 0.05),
-  new THREE.MeshLambertMaterial({ map: opTexture })
-);
-opPoster.add(opBg);
-// Frame
-const opFrame = new THREE.Mesh(new THREE.BoxGeometry(2.6, 3.4, 0.04), new THREE.MeshLambertMaterial({color:0x3a2a1a}));
-opFrame.position.z=-0.03; opPoster.add(opFrame);
-
-// ── INTERACTIVE OBJECT GLOW + OUTLINES ──
-const interactGlows = [];
-const interactOutlines = [];
-
-function addInteractGlow(x, y, z, objGroup, distance=3) {
-  const gl = new THREE.PointLight(0xffffff, 0, distance);
-  gl.position.set(x, y, z);
-  scene.add(gl);
-  interactGlows.push(gl);
-  
-  if (objGroup) {
-    const box = new THREE.Box3().setFromObject(objGroup);
-    const size = box.getSize(new THREE.Vector3());
-    const center = box.getCenter(new THREE.Vector3());
-    
-    const geo = new THREE.BoxGeometry(size.x + 0.2, size.y + 0.2, size.z + 0.2);
-    const edges = new THREE.EdgesGeometry(geo);
-    const mat = new THREE.LineBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0 });
-    const line = new THREE.LineSegments(edges, mat);
-    line.position.copy(center);
-    scene.add(line);
-    interactOutlines.push(line);
-  }
-  return gl;
-}
-
-// ── CAT (Sleeping curled up) ──
-const catGroup = new THREE.Group();
-catGroup.position.set(5.5, 0.1, 2); // front right corner near lamp
-scene.add(catGroup);
-const bedGeo = new THREE.CylinderGeometry(0.7, 0.7, 0.1, 16);
-const bedMat = new THREE.MeshLambertMaterial({color: 0xaa4444});
-const bed = new THREE.Mesh(bedGeo, bedMat);
-catGroup.add(bed);
-const bedInner = new THREE.Mesh(new THREE.CylinderGeometry(0.6, 0.6, 0.12, 16), new THREE.MeshLambertMaterial({color: 0xcc6666}));
-catGroup.add(bedInner);
-gltfLoader.load('model/sleeping_cat.glb', gltf => {
-  const catModel = gltf.scene;
-  prepModel(catModel);
-  fitModelToHeight(catModel, 0.37);
-  catModel.position.set(0, 0.18, 0);
-  catModel.rotation.y = -Math.PI / 2;
-  catGroup.add(catModel);
-});
-
-catGroup.userData = { clickable: true, id: 'cat', label: '\uD83D\uDC31 SLEEPING CAT \u2014 Meow' };
-
-const catAudioListener = new THREE.AudioListener();
-camera.add(catAudioListener);
-const catSound = new THREE.Audio(catAudioListener);
-const bushSound = new THREE.Audio(catAudioListener);
-const bushRevSound = new THREE.Audio(catAudioListener);
-const clickSound = new THREE.Audio(catAudioListener);
-const kbSound = new THREE.Audio(catAudioListener);
-const screenUpSound = new THREE.Audio(catAudioListener);
-const screenOffSound = new THREE.Audio(catAudioListener);
-const audioLoader = new THREE.AudioLoader();
-audioLoader.load('sound/CatMeow.mp3', function(buffer) {
-  catSound.setBuffer(buffer);
-  catSound.setVolume(1.0);
-});
-audioLoader.load('sound/click.mp3', function(buffer) {
-  clickSound.setBuffer(buffer);
-  clickSound.setVolume(0.5);
-});
-audioLoader.load('sound/BushSound.mp3', function(buffer) {
-  bushSound.setBuffer(buffer);
-  bushSound.setVolume(0.6);
-  
-  const ctx = THREE.AudioContext.getContext();
-  const revBuffer = ctx.createBuffer(buffer.numberOfChannels, buffer.length, buffer.sampleRate);
-  for(let i=0; i<buffer.numberOfChannels; i++) {
-    revBuffer.getChannelData(i).set(buffer.getChannelData(i).slice().reverse());
-  }
-  bushRevSound.setBuffer(revBuffer);
-  bushRevSound.setVolume(0.6);
-});
-audioLoader.load('sound/keyboardClicking.mp3', function(buffer) {
-  kbSound.setBuffer(buffer);
-  kbSound.setVolume(1.0);
-});
-audioLoader.load('sound/ScreenShowingUp.mp3', function(buffer) {
-  screenUpSound.setBuffer(buffer);
-  screenUpSound.setVolume(1.0);
-});
-audioLoader.load('sound/ScreenShowingOff.mp3', function(buffer) {
-  screenOffSound.setBuffer(buffer);
-  screenOffSound.setVolume(1.0);
-});
-
-const bgMusic = new Audio('sound/BGMusic.mp3');
-bgMusic.loop = true;
-bgMusic.volume = 0.14;
-
-const lampOnSfx = new Audio('sound/LampTurningOn.mp3');
-const lampOffSfx = new Audio('sound/LampTurningOff.mp3');
-lampOnSfx.volume = 0.28;
-lampOffSfx.volume = 0.28;
-
-function playLampSfx(isOn) {
-  const sfx = isOn ? lampOnSfx : lampOffSfx;
-  sfx.currentTime = 0;
-  sfx.play().catch(() => {});
-}
-
-function startBgMusic() {
-  bgMusic.play().catch(() => {
-    const retryBgMusic = () => {
-      bgMusic.play().catch(() => {});
-      window.removeEventListener('pointerdown', retryBgMusic);
-      window.removeEventListener('keydown', retryBgMusic);
-    };
-    window.addEventListener('pointerdown', retryBgMusic, { once: true });
-    window.addEventListener('keydown', retryBgMusic, { once: true });
-  });
-}
-
-// Update world matrices so bounding boxes are accurate
-scene.updateMatrixWorld(true);
-
-// ── SPARKLES FOR INTERACTIVE OBJECTS ──
-const interactiveSparkles = [];
-const sparkleMat = new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.8 });
-function addSparkle(objGroup) {
-  const box = new THREE.Box3().setFromObject(objGroup);
-  const center = box.getCenter(new THREE.Vector3());
-  const geo = new THREE.BoxGeometry(0.05, 0.05, 0.05);
-  for(let i=0; i<3; i++) {
-    const s = new THREE.Mesh(geo, sparkleMat);
-    s.position.copy(center);
-    s.position.x += (Math.random() - 0.5) * 1.5;
-    s.position.y += (Math.random() - 0.5) * 1.5;
-    s.position.z += (Math.random() - 0.5) * 1.5;
-    s.userData = { baseY: s.position.y, phase: Math.random() * Math.PI * 2, speed: 0.5 + Math.random() * 0.5 };
-    scene.add(s);
-    interactiveSparkles.push(s);
-  }
-}
-
-// Add sparkles to items
-[laptopGroup, posterGroup, shelfGroup, plantG, ceilingBulbG, floorLampL, floorLampR, catGroup].forEach(addSparkle);
-
-// ── CHAIR — centered with desk ──
-const chairG = new THREE.Group(); chairG.position.set(0, 0, 3); scene.add(chairG);
-const seat=new THREE.Mesh(new THREE.BoxGeometry(1.2,0.12,1.2),M.chairCushion); seat.position.y=1.1; seat.castShadow=true; chairG.add(seat);
-const chairBack=new THREE.Mesh(new THREE.BoxGeometry(1.2,1.2,0.12),M.chair); chairBack.position.set(0,1.76,0.54); chairBack.castShadow=true; chairG.add(chairBack);
-[[-0.5,0.55,0.5],[0.5,0.55,0.5],[-0.5,0.55,-0.5],[0.5,0.55,-0.5]].forEach(([x,y,z]) => {
-  const leg=new THREE.Mesh(new THREE.BoxGeometry(0.1,1.1,0.1),M.chair); leg.position.set(x,y,z); chairG.add(leg);
-});
-
-// ── HUMAN CHARACTER (detailed, faceless, lo-fi) ──
-const characterGroup = new THREE.Group();
-characterGroup.position.set(-5, 0, 3);
-characterGroup.visible = true;
-scene.add(characterGroup);
-
-const head = new THREE.Object3D();
-const armLUpper = new THREE.Object3D();
-const armRUpper = new THREE.Object3D();
-const armLLower = new THREE.Object3D();
-const armRLower = new THREE.Object3D();
-const legLUpper = new THREE.Object3D();
-const legRUpper = new THREE.Object3D();
-const legLLower = new THREE.Object3D();
-const legRLower = new THREE.Object3D();
-
-gltfLoader.load('model/Character.glb', gltf => {
-  const characterModel = gltf.scene;
-  prepModel(characterModel);
-  fitModelToHeight(characterModel, 0.57);
-  characterGroup.add(characterModel);
-
-  const walkClip = THREE.AnimationClip.findByName(gltf.animations, 'Walk');
-  const idleClip = THREE.AnimationClip.findByName(gltf.animations, 'Idle') || THREE.AnimationClip.findByName(gltf.animations, 'Idle2');
-  if (walkClip || idleClip) {
-    const mixer = new THREE.AnimationMixer(characterModel);
-    characterActions.walk = walkClip ? mixer.clipAction(walkClip) : null;
-    characterActions.idle = idleClip ? mixer.clipAction(idleClip) : null;
-    if (characterActions.idle) characterActions.idle.play();
-    else if (characterActions.walk) {
-      characterActions.walk.play();
-      characterActions.walk.paused = true;
-    }
-    animationMixers.push(mixer);
-  }
-});
-
-// ── WAYPOINT WALK SYSTEM ──
-// Walk path: start(front-left) -> poster(left wall) -> bookshelf(right) -> window(right) -> back via front
-const WAYPOINTS = [
-  { x: -5, z: 3, pause: 1, lookAt: 0 },                        // start (look forward)
-  { x: -5.5, z: 1, pause: 0 },                                 // pass inside lamp
-  { x: -6.5, z: -2, pause: 4, lookAt: -Math.PI / 2 },          // stop at poster/keyboard (look left)
-  { x: -4, z: -2.5, pause: 0 },                                // walk behind desk
-  { x: 4, z: -2.5, pause: 0 },                                 // cross behind desk
-  { x: 5, z: -3.5, pause: 4, lookAt: Math.PI },                // bookshelf (look back)
-  { x: 5.5, z: -0.5, pause: 4, lookAt: Math.PI / 2 },          // window (look right)
-  { x: 5.5, z: 3.5, pause: 0 },                                // walk forward towards camera to clear desk corner
-  { x: 0, z: 3.5, pause: 0 }                                   // cross front of desk (behind chair)
-];
-let wpIndex = 0;
-let wpPauseTimer = 0;
 let charAtDesk = false;
-const CHAR_WALK_SPEED = 1.5;
+const visitedInteractives = new Set();
+let hoveredObj = null;
 
-// ── PARTICLES ──
-const particles = [];
-for(let i=0;i<60;i++){
-  const p = new THREE.Mesh(new THREE.BoxGeometry(0.06,0.06,0.06),
-    new THREE.MeshBasicMaterial({ color:[0xb8ff8c,0x88ccff,0xffdd66,0xff88aa][Math.floor(Math.random()*4)], transparent:true, opacity:0.6 }));
-  p.position.set((Math.random()-0.5)*14, Math.random()*6+0.5, (Math.random()-0.5)*12);
-  p.userData.phase = Math.random()*Math.PI*2;
-  scene.add(p); particles.push(p);
-}
-
-// ── POST-PROCESSING (AURA OUTLINES) ──
-const composer = new EffectComposer(renderer);
-const renderPass = new RenderPass(scene, camera);
-composer.addPass(renderPass);
-
-const outlinePass = new OutlinePass(new THREE.Vector2(window.innerWidth, window.innerHeight), scene, camera);
-outlinePass.edgeStrength = 4.0;
-outlinePass.edgeGlow = 1.0;
-outlinePass.edgeThickness = 1.5;
-outlinePass.pulsePeriod = 5.5; // Slower breathing effect
-outlinePass.visibleEdgeColor.set('#ffffff');
-outlinePass.hiddenEdgeColor.set('#000000');
-composer.addPass(outlinePass);
-
-const visitedOutlinePass = new OutlinePass(new THREE.Vector2(window.innerWidth, window.innerHeight), scene, camera);
-visitedOutlinePass.edgeStrength = 1.4;
-visitedOutlinePass.edgeGlow = 0.35;
-visitedOutlinePass.edgeThickness = 1.0;
-visitedOutlinePass.pulsePeriod = 5.5;
-visitedOutlinePass.visibleEdgeColor.set('#8a8a8a');
-visitedOutlinePass.hiddenEdgeColor.set('#000000');
-composer.addPass(visitedOutlinePass);
+// ── UI ELEMENTS ──
+const menuEl = document.getElementById('menu');
+const hudEl = document.getElementById('hud');
+const hud_loc = document.getElementById('loc-box');
+const hud_hint = document.getElementById('hint-bar');
+const backBtn = document.getElementById('back-btn');
+const label = document.getElementById('obj-label');
+const cur = document.getElementById('cur');
 
 // ── RAYCASTING ──
 const raycaster = new THREE.Raycaster();
 const mouse = new THREE.Vector2();
-const clickables = [laptopGroup, shelfGroup, posterGroup, plantG, floorLampL, floorLampR, ceilingBulbG, catGroup];
-const visitedInteractives = new Set();
-outlinePass.selectedObjects = [];
-visitedOutlinePass.selectedObjects = [];
+
+function getClickable(obj) {
+  let o = obj;
+  while (o) {
+    if (o.userData && o.userData.clickable) return o;
+    o = o.parent;
+  }
+  return null;
+}
 
 function updateOutlineSelection() {
   if (currentState !== 'ROOM') {
@@ -831,48 +55,36 @@ function updateOutlineSelection() {
     visitedOutlinePass.selectedObjects = [];
     return;
   }
-  outlinePass.selectedObjects = clickables.filter(obj => !visitedInteractives.has(obj));
-  visitedOutlinePass.selectedObjects = clickables.filter(obj => visitedInteractives.has(obj));
-}
-
-let hoveredObj = null;
-const label = document.getElementById('obj-label');
-
-function getClickable(obj) {
-  let o = obj;
-  while(o) { if(o.userData && o.userData.clickable) return o; o = o.parent; }
-  return null;
+  outlinePass.selectedObjects = room.clickables.filter(obj => !visitedInteractives.has(obj));
+  visitedOutlinePass.selectedObjects = room.clickables.filter(obj => visitedInteractives.has(obj));
 }
 
 // ── CAMERA ANIMATION ──
 let camAnimating = false;
-let camDestPos = new THREE.Vector3();
-let camDestTarget = new THREE.Vector3();
-let camT = 0, camDuration = 2.2, camOnDone = null;
-let camStartPos = new THREE.Vector3();
-let camStartTarget = new THREE.Vector3();
+const camDestPos = new THREE.Vector3();
+const camDestTarget = new THREE.Vector3();
+const camStartPos = new THREE.Vector3();
+const camStartTarget = new THREE.Vector3();
+let camT = 0;
+let camDuration = 2.2;
+let camOnDone = null;
 
-function flyTo(pos, target, duration=2.2, onDone=null) {
+function flyTo(pos, target, duration = 2.2, onDone = null) {
   camStartPos.copy(camera.position);
   camStartTarget.copy(camTarget);
   camDestPos.copy(pos);
   camDestTarget.copy(target);
-  camT = 0; camAnimating = true;
-  camDuration = duration; camOnDone = onDone;
+  camT = 0;
+  camAnimating = true;
+  camDuration = duration;
+  camOnDone = onDone;
 }
 
-function easeInOutCubic(t) { return t < 0.5 ? 4*t*t*t : 1 - Math.pow(-2*t+2,3)/2; }
+function easeInOutCubic(t) {
+  return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+}
 
-// ── UI STATE ──
-const menuEl = document.getElementById('menu');
-const hudEl = document.getElementById('hud');
-const hud_loc = document.getElementById('loc-box');
-const hud_hint = document.getElementById('hint-bar');
-const backBtn = document.getElementById('back-btn');
-const modal = document.getElementById('modal');
-const modalTitle = document.getElementById('modal-title');
-const modalBody = document.getElementById('modal-body');
-
+// ── NAVIGATION & VIEWS ──
 function showWorld() {
   currentState = 'ROOM';
   updateOutlineSelection();
@@ -892,7 +104,7 @@ function showMenu() {
   hudEl.style.opacity = '0';
   backBtn.style.display = 'none';
   charAtDesk = false;
-  modal.classList.remove('open');
+  closeModal();
   hoveredObj = null;
   label.style.opacity = '0';
   cur.classList.remove('hovering');
@@ -907,12 +119,12 @@ function showLaptopView() {
   currentState = 'LAPTOP';
   charAtDesk = false;
   flyTo(CAM_STATES.LAPTOP.pos, CAM_STATES.LAPTOP.target, 2.0, () => {
-    if (kbSound.isPlaying) kbSound.stop();
-    kbSound.play();
-    
+    if (kbSound && kbSound.isPlaying) kbSound.stop();
+    if (kbSound) kbSound.play();
+
     setTimeout(() => {
-      if (screenUpSound.isPlaying) screenUpSound.stop();
-      screenUpSound.play();
+      if (screenUpSound && screenUpSound.isPlaying) screenUpSound.stop();
+      if (screenUpSound) screenUpSound.play();
       openProjectModal();
     }, 600);
   });
@@ -934,17 +146,25 @@ function showPosterView() {
   });
 }
 
+function showShelfView() {
+  currentState = 'SHELF';
+  charAtDesk = false;
+  flyTo(CAM_STATES.SHELF.pos, CAM_STATES.SHELF.target, 2.0, () => {
+    openExperienceModal();
+  });
+}
+
 function backFromView() {
   if (currentState === 'LAPTOP') {
-    if (screenOffSound.isPlaying) screenOffSound.stop();
-    screenOffSound.play();
+    if (screenOffSound && screenOffSound.isPlaying) screenOffSound.stop();
+    if (screenOffSound) screenOffSound.play();
   }
   if (currentState === 'PLANT') {
-    if (bushRevSound.isPlaying) bushRevSound.stop();
-    bushRevSound.play();
+    if (bushRevSound && bushRevSound.isPlaying) bushRevSound.stop();
+    if (bushRevSound) bushRevSound.play();
   }
 
-  modal.classList.remove('open');
+  closeModal();
   currentState = 'ROOM';
   charAtDesk = false;
   hoveredObj = null;
@@ -953,474 +173,196 @@ function backFromView() {
   flyTo(CAM_STATES.ROOM.pos, CAM_STATES.ROOM.target, 1.8);
 }
 
-function openContactModal() {
-  modalTitle.textContent = '\uD83D\uDCDE OLAN\'S CONTACT & SOCIALS';
-  modalBody.innerHTML = `
-    <div class="contact-row" onclick="window.open('https://instagram.com/olan.ism', '_blank')">
-      <div class="contact-icon">
-        <svg viewBox="0 0 24 24">
-          <path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zM12 0C8.741 0 8.333.014 7.053.072 2.695.272.273 2.69.073 7.051.014 8.333 0 8.741 0 12c0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98C15.668.014 15.259 0 12 0zm0 5.838a6.162 6.162 0 100 12.324 6.162 6.162 0 000-12.324zM12 16a4 4 0 110-8 4 4 0 010 8zm6.406-11.845a1.44 1.44 0 100 2.881 1.44 1.44 0 000-2.881z"/>
-        </svg>
-      </div>
-      <div class="contact-info">
-        <div class="contact-label">INSTAGRAM</div>
-        <div class="contact-val">@olan.ism</div>
-      </div>
-    </div>
-    <div class="contact-row" onclick="window.open('https://youtube.com/@olanwalaweh', '_blank')">
-      <div class="contact-icon">
-        <svg viewBox="0 0 24 24">
-          <path d="M23.498 6.163a3.003 3.003 0 00-2.11-2.11C19.517 3.545 12 3.545 12 3.545s-7.517 0-9.388.508a3.003 3.003 0 00-2.11 2.11C0 8.033 0 12 0 12s0 3.967.502 5.837a3.003 3.003 0 002.11 2.11c1.871.508 9.388.508 9.388.508s7.517 0 9.388-.508a3.003 3.003 0 002.11-2.11C24 15.967 24 12 24 12s0-3.967-.502-5.837zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/>
-        </svg>
-      </div>
-      <div class="contact-info">
-        <div class="contact-label">YOUTUBE</div>
-        <div class="contact-val">@olanwalaweh</div>
-      </div>
-    </div>
-    <div class="contact-row" onclick="window.open('https://www.linkedin.com/in/insan-maulana-104a04263', '_blank')">
-      <div class="contact-icon">
-        <svg viewBox="0 0 24 24">
-          <path d="M22.23 0H1.77C.8 0 0 .77 0 1.72v20.56C0 23.23.8 24 1.77 24h20.46c.98 0 1.77-.77 1.77-1.72V1.72C24 .77 23.2 0 22.23 0zM7.12 20.45H3.56V9h3.56v11.45zM5.34 7.43c-1.14 0-2.06-.92-2.06-2.06 0-1.14.92-2.06 2.06-2.06 1.14 0 2.06.92 2.06 2.06 0 1.14-.92 2.06-2.06 2.06zm15.11 13.02h-3.56v-5.6c0-1.34-.03-3.05-1.86-3.05-1.86 0-2.14 1.45-2.14 2.95v5.7H9.33V9h3.42v1.56h.05c.48-.9 1.64-1.85 3.37-1.85 3.6 0 4.27 2.37 4.27 5.45v6.29z"/>
-        </svg>
-      </div>
-      <div class="contact-info">
-        <div class="contact-label">LINKEDIN</div>
-        <div class="contact-val">Insan Maulana</div>
-      </div>
-    </div>
-    <div class="contact-row" onclick="window.open('https://github.com/OlanIsm', '_blank')">
-      <div class="contact-icon">
-        <svg viewBox="0 0 24 24">
-          <path d="M12 .297c-6.63 0-12 5.373-12 12 0 5.303 3.438 9.8 8.205 11.385.6.113.82-.258.82-.577 0-.285-.01-1.04-.015-2.04-3.338.724-4.042-1.61-4.042-1.61C4.422 18.07 3.633 17.7 3.633 17.7c-1.087-.744.084-.729.084-.729 1.205.084 1.838 1.236 1.838 1.236 1.07 1.835 2.809 1.305 3.495.998.108-.776.417-1.305.76-1.605-2.665-.3-5.466-1.332-5.466-5.93 0-1.31.465-2.38 1.235-3.22-.135-.303-.54-1.523.105-3.176 0 0 1.005-.322 3.3 1.23.96-.267 1.98-.399 3-.405 1.02.006 2.04.138 3 .405 2.28-1.552 3.285-1.23 3.285-1.23.645 1.653.24 2.873.12 3.176.765.84 1.23 1.91 1.23 3.22 0 4.61-2.805 5.625-5.475 5.92.42.36.81 1.096.81 2.22 0 1.606-.015 2.896-.015 3.286 0 .315.21.69.825.57C20.565 22.092 24 17.592 24 12.297c0-6.627-5.373-12-12-12"/>
-        </svg>
-      </div>
-      <div class="contact-info">
-        <div class="contact-label">GITHUB</div>
-        <div class="contact-val">OlanIsm</div>
-      </div>
-    </div>
-  `;
-  modal.classList.add('open');
-}
-
-function openProjectModal() {
-  modalTitle.textContent = '\uD83D\uDCBB OLAN\'S PROJECTS';
-  modalBody.innerHTML = `
-    <div class="proj-card-row" onclick="window.open('https://github.com/OlanIsm/Electus-PROJECT', '_blank')">
-      <div class="proj-card-info">
-        <div class="proj-tag" style="border-color:#88ccff;color:#88ccff;background:rgba(136,204,255,0.1)">IN PROGRESS</div>
-        <div class="proj-name">ELECTUS ATS + AI CV</div>
-        <div class="proj-desc">Applicant Tracking System with AI-powered CV summarization using Gemini API. Full stack development featuring React frontend, Nest.js backend, and PostgreSQL database.</div>
-        <div class="proj-tech">
-          <span class="tech-chip">REACT</span><span class="tech-chip">NEST.TS</span><span class="tech-chip">POSTGRE</span><span class="tech-chip">GEMINI API</span>
-        </div>
-      </div>
-      <div class="proj-card-img" style="background: #120e0a;"><img src="img/proj_ats.png" alt="ATS" style="object-fit: contain;"></div>
-    </div>
-    <div class="proj-card-row" onclick="window.open('https://github.com/OlanIsm/TechnoScape-2026-Hackathon', '_blank')">
-      <div class="proj-card-info">
-        <div class="proj-tag" style="border-color:#ff88aa;color:#ff88aa;background:rgba(255,136,170,0.1)">HACKATHON FINALIST</div>
-        <div class="proj-name">VOLUMEMATE</div>
-        <div class="proj-desc">Cooperative application featuring collective buying and AI-driven demand forecasting with optimal buying recommendations to empower cooperatives. TechnoScape Hackathon 2026 Finalist.</div>
-        <div class="proj-tech">
-          <span class="tech-chip">REACT</span><span class="tech-chip">NEXT.JS</span><span class="tech-chip">AI FORECASTING</span>
-        </div>
-      </div>
-      <div class="proj-card-img" style="background: #120e0a;"><img src="img/VolumeMate.png" alt="VolumeMate" style="object-fit: contain;"></div>
-    </div>
-    <div class="proj-card-row" onclick="window.open('https://github.com/OlanIsm/Carbon-Emission-Ai-Prediction', '_blank')">
-      <div class="proj-card-info">
-        <div class="proj-tag" style="border-color:#88ffcc;color:#88ffcc;background:rgba(136,255,204,0.1)">MVP / ML</div>
-        <div class="proj-name">EMITRACK</div>
-        <div class="proj-desc">Machine Learning MVP application designed to predict vehicle carbon emissions based on car model and specifications.</div>
-        <div class="proj-tech">
-          <span class="tech-chip">PYTHON</span><span class="tech-chip">MACHINE LEARNING</span><span class="tech-chip">MVP</span>
-        </div>
-      </div>
-      <div class="proj-card-img" style="background: #120e0a;"><img src="img/EmiTrack.png" alt="EmiTrack" style="object-fit: contain;"></div>
-    </div>
-    <div class="proj-card-row" onclick="window.open('https://github.com/OlanIsm/Genshin-Import', '_blank')">
-      <div class="proj-card-info">
-        <div class="proj-tag" style="border-color:#aa88ff;color:#aa88ff;background:rgba(170,136,255,0.1)">MOBILE / CRUD</div>
-        <div class="proj-name">GENSHIN IMPORT</div>
-        <div class="proj-desc">My first mobile CRUD application themed around Genshin Impact, allowing users to simulate buying and selling Genshin weapons and artifacts.</div>
-        <div class="proj-tech">
-          <span class="tech-chip">MOBILE</span><span class="tech-chip">CRUD</span><span class="tech-chip">JAVA/KOTLIN</span>
-        </div>
-      </div>
-      <div class="proj-card-img" style="background: #120e0a;"><img src="img/GenshinImport.png" alt="Genshin Import" style="object-fit: contain;"></div>
-    </div>
-    <div class="proj-card-row" onclick="window.open('https://github.com/OlanIsm/V-Phone', '_blank')">
-      <div class="proj-card-info">
-        <div class="proj-tag">COMPLETED</div>
-        <div class="proj-name">V-PHONE</div>
-        <div class="proj-desc">An interactive and responsive smartphone e-commerce website. My very first basic web project built purely with vanilla HTML, CSS, and Javascript without any frameworks.</div>
-        <div class="proj-tech">
-          <span class="tech-chip">HTML</span><span class="tech-chip">CSS</span><span class="tech-chip">JAVASCRIPT</span>
-        </div>
-      </div>
-      <div class="proj-card-img" style="background: #120e0a;"><img src="img/V-Phone.png" alt="V-Phone" style="object-fit: contain;"></div>
-    </div>
-    <div class="proj-card-row" onclick="window.open('https://github.com/OlanIsm/Olan-s-Portofolio', '_blank')">
-      <div class="proj-card-info">
-        <div class="proj-tag" style="border-color:#88ccff;color:#88ccff;background:rgba(136,204,255,0.1)">IN PROGRESS</div>
-        <div class="proj-name">OLAN.DEV (PORTFOLIO)</div>
-        <div class="proj-desc">Interactive 3D portfolio website featuring a pixel-art style bedroom visualization, showcasing my projects, interactive skill tree, and social contact details.</div>
-        <div class="proj-tech">
-          <span class="tech-chip">THREE.JS</span><span class="tech-chip">HTML</span><span class="tech-chip">CSS</span><span class="tech-chip">JAVASCRIPT</span>
-        </div>
-      </div>
-      <div class="proj-card-img" style="background: #120e0a;"><img src="img/Olan.dev.png" alt="Olan.dev" style="object-fit: contain;"></div>
-    </div>`;
-  modal.classList.add('open');
-}
-
-function openSkillTreeModal() {
-  modalTitle.textContent = '\uD83C\uDF31 OLAN\'S SKILL TREE';
-  
-  const skills = [
-    { 
-      name: 'JavaScript / TS', 
-      pct: 90, 
-      color: '#ffd080',
-      icon: `<svg viewBox="0 0 24 24"><rect x="2" y="2" width="20" height="20" rx="3" fill="#3178c6"/><path d="M11.5 8.5H7v1.5h1.5v5.5h1.5v-5.5h1.5z M13.5 13.5c.3.5.8.8 1.5.8.7 0 1.2-.3 1.2-.8s-.4-.7-1.2-1c-1.2-.4-2-.8-2-2 0-1.2.9-2.2 2.2-2.2 1.2 0 2 .5 2.5 1.5l-1.2.8c-.3-.5-.7-.8-1.3-.8-.6 0-1 .3-1 .7s.3.5 1 .8c1.3.4 2.2.9 2.2 2.2 0 1.3-1 2.2-2.5 2.2-1.5 0-2.3-.7-2.7-1.7l1.3-.8z" fill="#ffffff"/></svg>`
-    },
-    { 
-      name: 'React & Next.js', 
-      pct: 85, 
-      color: '#88ccff',
-      icon: `<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="2" fill="#88ccff"/><path d="M12 7c3.86 0 7-1.34 7-3s-3.14-3-7-3-7 1.34-7 3 3.14 3 7 3zm0 10c-3.86 0-7 1.34-7 3s3.14 3 7 3 7-1.34 7-3-3.14-3-7-3zm0-5c-1.93 0-3.5-.67-3.5-1.5S10.07 9 12 9s3.5.67 3.5 1.5S13.93 12 12 12z" fill="none" stroke="#88ccff" stroke-width="1.2"/><ellipse cx="12" cy="12" rx="10" ry="3.5" fill="none" stroke="#88ccff" stroke-width="1.2" transform="rotate(30 12 12)"/><ellipse cx="12" cy="12" rx="10" ry="3.5" fill="none" stroke="#88ccff" stroke-width="1.2" transform="rotate(90 12 12)"/><ellipse cx="12" cy="12" rx="10" ry="3.5" fill="none" stroke="#88ccff" stroke-width="1.2" transform="rotate(150 12 12)"/></svg>`
-    },
-    { 
-      name: 'Python & Flask', 
-      pct: 80, 
-      color: '#ff88aa',
-      icon: `<svg viewBox="0 0 24 24" fill="none" stroke="#ff88aa" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v8c0 1.1-.9 2-2 2H2v2c0 3.3 2.7 6 6 6h4v-8c0-1.1.9-2 2-2h8v-2c0-3.3-2.7-6-6-6h-4z"/><path d="M12 22v-8c0-1.1.9-2 2-2h8v-2c0-3.3-2.7-6-6-6h-4v8c0 1.1-.9 2-2 2H2v2c0 3.3 2.7 6 6 6h4z" stroke="#ffd080"/><circle cx="6" cy="6" r="1" fill="#ff88aa"/><circle cx="18" cy="18" r="1" fill="#ffd080"/></svg>`
-    },
-    { 
-      name: 'HTML / CSS', 
-      pct: 95, 
-      color: '#ffdd66',
-      icon: `<svg viewBox="0 0 24 24" fill="#ffdd66"><path d="M1.5 0h21l-1.9 21.2L12 24l-8.6-2.8L1.5 0zm15.8 5.7H6.7l.4 4.5h9.6l-.4 4.7-4.3 1.4-4.3-1.4-.3-3.1h2.5l.2 1.6 1.9.6 1.9-.6.2-2.2H7.5l-.8-9.1h10.9l-.3 3.6z"/></svg>`
-    },
-    { 
-      name: 'Node & Express', 
-      pct: 75, 
-      color: '#88ffcc',
-      icon: `<svg viewBox="0 0 24 24" fill="#88ffcc"><path d="M12 1.25L3.25 6.3v10.1L12 21.5l8.75-5.1V6.3L12 1.25zM12 3.8l6.5 3.8v7.6l-6.5 3.8-6.5-3.8V7.6L12 3.8z"/><path d="M12 7.5L8.5 9.5v3.5l3.5 2 3.5-2V9.5L12 7.5z"/></svg>`
-    },
-    { 
-      name: 'Three.js / WebGL', 
-      pct: 70, 
-      color: '#aa88ff',
-      icon: `<svg viewBox="0 0 24 24" fill="none" stroke="#aa88ff" stroke-width="1.5"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>`
-    }
-  ];
-  
-  let branchesHTML = '';
-  skills.forEach((skill, i) => {
-    branchesHTML += `
-      <div class="st-branch">
-        <div class="st-skill">
-          <div class="st-skill-header">
-            <span class="st-skill-icon">${skill.icon}</span>
-            <span class="st-skill-name">${skill.name}</span>
-          </div>
-          <div class="st-skill-body">
-            <div class="st-skill-info">
-              <span class="st-skill-pct">${skill.pct}%</span>
-            </div>
-            <div class="st-bar-bg"><div class="st-bar-fill" style="width:${skill.pct}%; background:${skill.color};"></div></div>
-          </div>
-        </div>
-      </div>
-    `;
-  });
-
-  modalBody.innerHTML = `
-    <div class="skill-tree-container">
-      <div class="skill-tree-horizontal">
-        <div class="st-root">CORE ROOT</div>
-        <div class="st-branches">
-          ${branchesHTML}
-        </div>
-      </div>
-    </div>
-  `;
-  modal.classList.add('open');
-
-  // Add scroll event handlers
-  const stContainer = modalBody.querySelector('.skill-tree-container');
-  if (stContainer) {
-    // 1. Mouse wheel horizontal scrolling
-    stContainer.addEventListener('wheel', (e) => {
-      if (e.deltaY !== 0) {
-        e.preventDefault();
-        stContainer.scrollLeft += e.deltaY * 1.5;
-      }
-    }, { passive: false });
-
-    // 2. Click-and-drag (grab-to-scroll)
-    let isDown = false;
-    let startX;
-    let scrollLeft;
-
-    stContainer.addEventListener('mousedown', (e) => {
-      isDown = true;
-      startX = e.pageX - stContainer.offsetLeft;
-      scrollLeft = stContainer.scrollLeft;
-    });
-    stContainer.addEventListener('mouseleave', () => {
-      isDown = false;
-    });
-    stContainer.addEventListener('mouseup', () => {
-      isDown = false;
-    });
-    stContainer.addEventListener('mousemove', (e) => {
-      if (!isDown) return;
-      e.preventDefault();
-      const x = e.pageX - stContainer.offsetLeft;
-      const walk = (x - startX) * 2;
-      stContainer.scrollLeft = scrollLeft - walk;
-    });
-  }
-}
-
-// ── EVENTS ──
-const cur = document.getElementById('cur');
+// ── EVENT LISTENERS ──
 document.addEventListener('mousemove', e => {
   cur.style.left = e.clientX - 7 + 'px';
-  cur.style.top  = e.clientY - 7 + 'px';
-  mouse.x = (e.clientX / window.innerWidth)  * 2 - 1;
+  cur.style.top = e.clientY - 7 + 'px';
+  mouse.x = (e.clientX / window.innerWidth) * 2 - 1;
   mouse.y = -(e.clientY / window.innerHeight) * 2 + 1;
   label.style.left = e.clientX + 18 + 'px';
-  label.style.top  = e.clientY - 10 + 'px';
+  label.style.top = e.clientY - 10 + 'px';
 });
 
 // Menu item clicks
 document.querySelectorAll('.menu-item').forEach(item => {
   item.addEventListener('click', () => {
-    if(item.classList.contains('disabled')) return;
-    if(clickSound.isPlaying) clickSound.stop();
-    clickSound.play();
+    if (item.classList.contains('disabled')) return;
+    if (clickSound && clickSound.isPlaying) clickSound.stop();
+    if (clickSound) clickSound.play();
     const action = item.dataset.action;
-    if(action === 'enter') { showWorld(); return; }
-    if(action === 'projects') { showWorld(); setTimeout(showLaptopView, 800); return; }
-    if(action === 'contact') { showWorld(); setTimeout(showPosterView, 800); return; }
+    if (action === 'enter') { showWorld(); return; }
+    if (action === 'projects') { showWorld(); setTimeout(showLaptopView, 800); return; }
+    if (action === 'contact') { showWorld(); setTimeout(showPosterView, 800); return; }
   });
   item.addEventListener('mouseenter', () => {
-    if(!item.classList.contains('disabled')) cur.classList.add('hovering');
+    if (!item.classList.contains('disabled')) cur.classList.add('hovering');
   });
   item.addEventListener('mouseleave', () => cur.classList.remove('hovering'));
 });
 
 backBtn.addEventListener('click', () => {
-  if(clickSound.isPlaying) clickSound.stop();
-  clickSound.play();
-  if(currentState === 'LAPTOP' || currentState === 'PLANT' || currentState === 'POSTER') backFromView();
+  if (clickSound && clickSound.isPlaying) clickSound.stop();
+  if (clickSound) clickSound.play();
+  if (['LAPTOP', 'PLANT', 'POSTER', 'SHELF'].includes(currentState)) backFromView();
   else showMenu();
 });
 backBtn.addEventListener('mouseenter', () => cur.classList.add('hovering'));
 backBtn.addEventListener('mouseleave', () => cur.classList.remove('hovering'));
 
 document.getElementById('modal-close').addEventListener('click', () => {
-  if(clickSound.isPlaying) clickSound.stop();
-  clickSound.play();
-  modal.classList.remove('open');
-  if(currentState === 'LAPTOP' || currentState === 'PLANT' || currentState === 'POSTER') backFromView();
+  if (clickSound && clickSound.isPlaying) clickSound.stop();
+  if (clickSound) clickSound.play();
+  closeModal();
+  if (['LAPTOP', 'PLANT', 'POSTER', 'SHELF'].includes(currentState)) backFromView();
 });
+
 modal.addEventListener('click', e => {
-  if(e.target === modal) {
-    if(clickSound.isPlaying) clickSound.stop();
-    clickSound.play();
-    modal.classList.remove('open');
-    if(currentState === 'LAPTOP' || currentState === 'PLANT' || currentState === 'POSTER') backFromView();
+  if (e.target === modal) {
+    if (clickSound && clickSound.isPlaying) clickSound.stop();
+    if (clickSound) clickSound.play();
+    closeModal();
+    if (['LAPTOP', 'PLANT', 'POSTER', 'SHELF'].includes(currentState)) backFromView();
   }
 });
 
 // World clicks
-canvas.addEventListener('click', () => {
-  if(currentState !== 'ROOM' || camAnimating) return;
+renderer.domElement.addEventListener('click', () => {
+  if (currentState !== 'ROOM' || camAnimating) return;
   raycaster.setFromCamera(mouse, camera);
   const hits = raycaster.intersectObjects(
-    clickables.flatMap(g => { const arr=[g]; g.traverse(c => { if(c!==g) arr.push(c); }); return arr; })
+    room.clickables.flatMap(g => { const arr = [g]; g.traverse(c => { if (c !== g) arr.push(c); }); return arr; })
   );
-  if(hits.length > 0) {
+  if (hits.length > 0) {
     const obj = getClickable(hits[0].object);
     if (obj) {
       visitedInteractives.add(obj);
       updateOutlineSelection();
-      
-      if(obj.userData.id === 'laptop') { showLaptopView(); }
-      else if(obj.userData.id === 'plant') {
+
+      if (obj.userData.id === 'laptop') { showLaptopView(); }
+      else if (obj.userData.id === 'plant') {
         showPlantView();
         setTimeout(() => {
-          if(bushSound.isPlaying) bushSound.stop();
-          bushSound.play();
-        }, 200); // 10% delay
+          if (bushSound && bushSound.isPlaying) bushSound.stop();
+          if (bushSound) bushSound.play();
+        }, 200);
       }
-      else if(obj.userData.id === 'lamp') {
+      else if (obj.userData.id === 'lamp') {
         obj.userData.on = !obj.userData.on;
-        if(typeof playLampSfx !== 'undefined') playLampSfx(obj.userData.on);
-        
-        // Update label immediately
+        playLampSfx(obj.userData.on);
+
         label.textContent = obj.userData.on ? '\uD83D\uDCA1 TURN OFF LAMP' : '\uD83D\uDCA1 TURN ON LAMP';
 
-        // Set intensity to 0 instead of visibility = false to prevent shader recompilation freezes
         if (obj.userData.toggleLight) obj.userData.toggleLight.intensity = obj.userData.on ? obj.userData.baseLightInt : 0;
         if (obj.userData.toggleSpot) obj.userData.toggleSpot.intensity = obj.userData.on ? obj.userData.baseSpotInt : 0;
         if (obj.userData.mat) obj.userData.mat.emissiveIntensity = obj.userData.on ? (obj.userData.emissiveOn || 0.4) : 0.0;
       }
-      else if(obj.userData.id === 'cat') {
-        if(catSound.isPlaying) catSound.stop();
-        catSound.play();
+      else if (obj.userData.id === 'cat') {
+        if (catSound && catSound.isPlaying) catSound.stop();
+        if (catSound) catSound.play();
       }
-      else if(obj.userData.id === 'poster') {
+      else if (obj.userData.id === 'poster') {
         showPosterView();
+      }
+      else if (obj.userData.id === 'shelf') {
+        showShelfView();
       }
     }
   }
 });
 
-// ── ANIMATE ──
+window.addEventListener('resize', () => {
+  camera.aspect = window.innerWidth / window.innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(window.innerWidth, window.innerHeight);
+  composer.setSize(window.innerWidth, window.innerHeight);
+  outlinePass.setSize(window.innerWidth, window.innerHeight);
+  visitedOutlinePass.setSize(window.innerWidth, window.innerHeight);
+});
+
+// ── ANIMATION LOOP ──
 const clock = new THREE.Clock();
 
 function animate() {
   requestAnimationFrame(animate);
   const dt = clock.getDelta();
-  const t  = clock.getElapsedTime();
+  const t = clock.getElapsedTime();
 
   animationMixers.forEach(mixer => mixer.update(dt));
 
-  // particle float
-  particles.forEach(p => {
-    p.position.y += Math.sin(t*0.8 + p.userData.phase) * 0.003;
-    p.position.x += Math.sin(t*0.5 + p.userData.phase) * 0.001;
-    if(p.position.y > 7) p.position.y = 0.3;
-    if(p.position.y < 0.1) p.position.y = 6.8;
+  // Particle float
+  room.particles.forEach(p => {
+    p.position.y += Math.sin(t * 0.8 + p.userData.phase) * 0.003;
+    p.position.x += Math.sin(t * 0.5 + p.userData.phase) * 0.001;
+    if (p.position.y > 7) p.position.y = 0.3;
+    if (p.position.y < 0.1) p.position.y = 6.8;
     p.rotation.x += 0.01; p.rotation.y += 0.015;
   });
 
-  // TV light flicker
+  // Light flickers
   tvLight.intensity = 0.6 + Math.sin(t * 7.3) * 0.1 + Math.sin(t * 13.1) * 0.03;
-  // Desk lamp pulse
   lampLight.intensity = 1.2 + Math.sin(t * 2.1) * 0.1;
-  // Ceiling bulb (steady white with very subtle flicker)
-  if (ceilingBulbG.userData.on) {
-    ceilingLight.intensity = ceilingBulbG.userData.baseLightInt + Math.sin(t * 2.2) * 0.06;
+  if (room.ceilingBulbG.userData.on) {
+    room.ceilingLight.intensity = room.ceilingBulbG.userData.baseLightInt + Math.sin(t * 2.2) * 0.06;
   }
-  // Floor lamps  // animate flickering lights
-  if (floorLampL.userData.on) {
-    flLightL.intensity = 1.2 + Math.sin(t * 1.8) * 0.08;
+  if (room.floorLampL.userData.on) {
+    room.flLightL.intensity = 1.2 + Math.sin(t * 1.8) * 0.08;
   }
-  if (floorLampR.userData.on) {
-    flLightR.intensity = 1.2 + Math.sin(t * 1.8 + 1.5) * 0.08;
+  if (room.floorLampR.userData.on) {
+    room.flLightR.intensity = 1.2 + Math.sin(t * 1.8 + 1.5) * 0.08;
   }
 
-  // Sparkle particles update
-  interactiveSparkles.forEach(s => {
+  // Sparkles
+  room.interactiveSparkles.forEach(s => {
     s.position.y = s.userData.baseY + Math.sin(t * s.userData.speed + s.userData.phase) * 0.2;
     s.rotation.x += 0.02;
     s.rotation.y += 0.02;
   });
 
-  // Character waypoint walking
-  if(!charAtDesk) {
-    const wp = WAYPOINTS[wpIndex];
-    const dx = wp.x - characterGroup.position.x;
-    const dz = wp.z - characterGroup.position.z;
-    const dist = Math.sqrt(dx*dx + dz*dz);
+  // Character movement
+  updateCharacterWaypoint(dt, t, charAtDesk);
 
-    if(dist < 0.15) {
-      setCharacterMoving(false);
-      // Arrived at waypoint
-      if(wp.pause > 0 && wpPauseTimer < wp.pause) {
-        // Pausing (looking at poster/bookshelf)
-        wpPauseTimer += dt;
-        
-        if(wp.lookAt !== undefined) {
-          let diff = wp.lookAt - characterGroup.rotation.y;
-          while(diff < -Math.PI) diff += Math.PI * 2;
-          while(diff > Math.PI) diff -= Math.PI * 2;
-          characterGroup.rotation.y += diff * (dt * 5);
-        }
-
-        // Idle animation - slight body sway
-        legLUpper.rotation.x = 0; legRUpper.rotation.x = 0;
-        legLLower.rotation.x = 0; legRLower.rotation.x = 0;
-        armLUpper.rotation.x = Math.sin(t*1.5)*0.08;
-        armRUpper.rotation.x = -Math.sin(t*1.5)*0.08;
-        // Head look around
-        head.rotation.y = Math.sin(t*0.8)*0.2;
-      } else {
-        // Move to next waypoint
-        wpPauseTimer = 0;
-        wpIndex = (wpIndex + 1) % WAYPOINTS.length;
-      }
-    } else {
-      setCharacterMoving(true);
-      // Walking toward waypoint
-      const angle = Math.atan2(dx, dz);
-      characterGroup.rotation.y = angle;
-      const speed = CHAR_WALK_SPEED * dt;
-      characterGroup.position.x += (dx / dist) * speed;
-      characterGroup.position.z += (dz / dist) * speed;
-      // Walk cycle - leg swing
-      const swing = Math.sin(t * 5) * 0.5;
-      legLUpper.rotation.x = swing;
-      legRUpper.rotation.x = -swing;
-      legLLower.rotation.x = Math.max(0, -swing*0.3);
-      legRLower.rotation.x = Math.max(0, swing*0.3);
-      // Arm swing
-      armLUpper.rotation.x = -swing * 0.4;
-      armRUpper.rotation.x = swing * 0.4;
-      // Head reset
-      head.rotation.y = 0;
-    }
-  } else {
-    setCharacterMoving(false);
-  }
-
-  // camera animation (fly-through)
-  if(camAnimating) {
+  // Camera fly animation
+  if (camAnimating) {
     camT += dt / camDuration;
     const et = easeInOutCubic(Math.min(camT, 1));
     camera.position.lerpVectors(camStartPos, camDestPos, et);
     camTarget.lerpVectors(camStartTarget, camDestTarget, et);
     camera.lookAt(camTarget);
-    if(camT >= 1) {
+    if (camT >= 1) {
       camAnimating = false;
-      if(camOnDone) { camOnDone(); camOnDone = null; }
+      if (camOnDone) { camOnDone(); camOnDone = null; }
     }
   }
 
-  // gentle camera float (menu & room states)
-  if(!camAnimating && (currentState === 'MENU' || currentState === 'ROOM')) {
+  // Gentle camera float
+  if (!camAnimating && (currentState === 'MENU' || currentState === 'ROOM')) {
     const basePos = CAM_STATES.MENU.pos;
-    camera.position.x = basePos.x + Math.sin(t*0.4)*0.3;
-    camera.position.y = basePos.y + Math.sin(t*0.3)*0.2;
+    camera.position.x = basePos.x + Math.sin(t * 0.4) * 0.3;
+    camera.position.y = basePos.y + Math.sin(t * 0.3) * 0.2;
     camera.lookAt(camTarget);
   }
 
-  // hover detection in ROOM state
-  if(currentState === 'ROOM' && !camAnimating) {
+  // Hover detection in ROOM state
+  if (currentState === 'ROOM' && !camAnimating) {
     raycaster.setFromCamera(mouse, camera);
-    const allObjs = clickables.flatMap(g => { const arr=[g]; g.traverse(c => { if(c!==g) arr.push(c); }); return arr; });
+    const allObjs = room.clickables.flatMap(g => { const arr = [g]; g.traverse(c => { if (c !== g) arr.push(c); }); return arr; });
     const hits = raycaster.intersectObjects(allObjs);
-    if(hits.length > 0) {
+    if (hits.length > 0) {
       const obj = getClickable(hits[0].object);
-      if(obj && obj !== hoveredObj) {
+      if (obj && obj !== hoveredObj) {
         hoveredObj = obj;
         let lbl = obj.userData.label;
         if (obj.userData.id === 'lamp') {
-          lbl = obj.userData.on ? '\uD83D\uDCA1 TURN OFF LAMP' : '\uD83D\uDCA1 TURN ON LAMP';
+          const isOn = obj.userData.on;
+          const bulbFill = isOn ? '#ffd080' : '#5a4a30';
+          const textStr = isOn ? 'TURN OFF LAMP' : 'TURN ON LAMP';
+          lbl = `<svg class="pixel-icon" style="fill: ${bulbFill}; margin-right: 6px;" viewBox="0 0 16 16"><rect x="5" y="2" width="6" height="7" /><rect x="4" y="3" width="8" height="5" /><rect x="6" y="4" width="4" height="3" fill="#1a140e" /><rect x="6" y="9" width="4" height="3" fill="#8a8a8a" /><rect x="7" y="12" width="2" height="1" fill="#555555" /></svg> ${textStr}`;
         }
-        label.textContent = lbl;
+        label.innerHTML = lbl;
         label.style.opacity = '1';
         cur.classList.add('hovering');
       }
-    } else if(hoveredObj) {
+    } else if (hoveredObj) {
       hoveredObj = null;
       label.style.opacity = '0';
       cur.classList.remove('hovering');
@@ -1432,19 +374,9 @@ function animate() {
 
 animate();
 
-window.addEventListener('resize', () => {
-  camera.aspect = window.innerWidth / window.innerHeight;
-  camera.updateProjectionMatrix();
-  renderer.setSize(window.innerWidth, window.innerHeight);
-  composer.setSize(window.innerWidth, window.innerHeight);
-  outlinePass.setSize(window.innerWidth, window.innerHeight);
-  visitedOutlinePass.setSize(window.innerWidth, window.innerHeight);
-});
-
-// Remove loader once everything is initialized and rendering starts
+// ── LOADER REMOVAL ──
 const loaderEl = document.getElementById('loader');
-if(loaderEl) {
-  // Give it a tiny delay to ensure the first frame is painted
+if (loaderEl) {
   setTimeout(() => {
     loaderEl.style.opacity = '0';
     loaderEl.style.visibility = 'hidden';
