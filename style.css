@@ -226,6 +226,29 @@ body {
 }
 #back-btn:hover { color:#ffd080; border-color:#ffd080; }
 
+/* help button (bottom-left) */
+#help-btn {
+  bottom:24px; left:24px;
+  background:rgba(26,20,14,0.92);
+  border:3px solid #4a3a20;
+  width:44px; height:44px;
+  font-family:'Press Start 2P', monospace;
+  font-size:16px; color:#ffd080;
+  cursor:none;
+  box-shadow: 4px 4px 0 #0a0806;
+  transition:color .1s, border-color .1s, transform .1s, box-shadow .1s;
+  display:none;
+  align-items:center;
+  justify-content:center;
+  pointer-events: auto;
+}
+#help-btn:hover {
+  color:#ffffff;
+  border-color:#ffd080;
+  box-shadow: 0 0 12px rgba(255,208,128,0.5), 4px 4px 0 #0a0806;
+  transform: translateY(-2px);
+}
+
 /* ── MODAL PANEL ── */
 #modal {
   position:fixed; inset:0;

@@ -12,6 +12,7 @@ import { openProjectModal } from './js/ui/projectModal.js';
 import { openExperienceModal } from './js/ui/experienceModal.js';
 import { openContactModal } from './js/ui/contactModal.js';
 import { openSkillTreeModal } from './js/ui/skillTreeModal.js';
+import { openHelpModal } from './js/ui/helpModal.js';
 import { modal, closeModal } from './js/ui/modalManager.js';
 
 // ── INITIALIZE AUDIO ──
@@ -33,6 +34,7 @@ const hudEl = document.getElementById('hud');
 const hud_loc = document.getElementById('loc-box');
 const hud_hint = document.getElementById('hint-bar');
 const backBtn = document.getElementById('back-btn');
+const helpBtn = document.getElementById('help-btn');
 const label = document.getElementById('obj-label');
 const cur = document.getElementById('cur');
 
@@ -96,6 +98,7 @@ function showWorld() {
   hud_loc.style.display = 'block';
   hud_hint.style.display = 'block';
   backBtn.style.display = 'block';
+  if (helpBtn) helpBtn.style.display = 'flex';
 }
 
 function showMenu() {
@@ -103,6 +106,7 @@ function showMenu() {
   updateOutlineSelection();
   hudEl.style.opacity = '0';
   backBtn.style.display = 'none';
+  if (helpBtn) helpBtn.style.display = 'none';
   charAtDesk = false;
   closeModal();
   hoveredObj = null;
@@ -208,6 +212,16 @@ backBtn.addEventListener('click', () => {
 });
 backBtn.addEventListener('mouseenter', () => cur.classList.add('hovering'));
 backBtn.addEventListener('mouseleave', () => cur.classList.remove('hovering'));
+
+if (helpBtn) {
+  helpBtn.addEventListener('click', () => {
+    if (clickSound && clickSound.isPlaying) clickSound.stop();
+    if (clickSound) clickSound.play();
+    openHelpModal();
+  });
+  helpBtn.addEventListener('mouseenter', () => cur.classList.add('hovering'));
+  helpBtn.addEventListener('mouseleave', () => cur.classList.remove('hovering'));
+}
 
 document.getElementById('modal-close').addEventListener('click', () => {
   if (clickSound && clickSound.isPlaying) clickSound.stop();
