@@ -13,11 +13,12 @@ export function openExperienceModal() {
 
   let cardsHTML = '';
   experienceData.forEach(item => {
+    const tagStyle = item.tagStyle ? `style="${item.tagStyle}"` : '';
     cardsHTML += `
       <div class="exp-card">
         <div class="exp-card-img"><img src="${item.img}" alt="${item.title}"></div>
         <div class="exp-card-content">
-          <div class="exp-card-tag">${item.tag}</div>
+          <div class="exp-card-tag" ${tagStyle}>${item.tag}</div>
           <div class="exp-card-title">${item.title}</div>
           <div class="exp-card-subtitle">${item.subtitle}</div>
           <div class="exp-card-desc">${item.desc}</div>
