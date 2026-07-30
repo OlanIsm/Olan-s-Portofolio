@@ -448,6 +448,13 @@ body {
   font-size: 16px;
 }
 
+/* ── CONTACT MODAL WIDE — large icons, no scroll ── */
+#modal-box.contact-modal-wide {
+  max-width: 800px;
+  width: 92vw;
+  max-height: 85vh;
+}
+
 .contact-grid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
@@ -999,14 +1006,16 @@ body {
   box-shadow: inset 0 0 20px rgba(0, 0, 0, 0.6);
 }
 
-.about-avatar-svg {
-  width: 100px !important;
-  height: 100px !important;
-  max-width: 100px !important;
-  max-height: 100px !important;
-  flex-shrink: 0;
+.about-avatar-photo {
+  width: 140px;
+  height: 140px;
+  object-fit: cover;
+  object-position: center top;
   border-radius: 8px;
-  filter: drop-shadow(0 4px 8px rgba(0,0,0,0.5));
+  border: 3px solid #4a3825;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.6), 0 0 0 1px #ffd08033;
+  flex-shrink: 0;
+  display: block;
 }
 
 .about-name {

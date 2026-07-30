@@ -1,5 +1,5 @@
 import { skillsTreeData } from '../data/skillsData.js?v=12';
-import { modal, modalBody, openModal } from './modalManager.js?v=115';
+import { modal, modalBody, openModal } from './modalManager.js?v=130';
 import { clickSound } from '../audio/audioManager.js';
 
 let activeNodeId = 'olan';

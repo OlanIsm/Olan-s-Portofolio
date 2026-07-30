@@ -3,7 +3,7 @@ export const modalTitle = document.getElementById('modal-title');
 export const modalBody = document.getElementById('modal-body');
 export const modalBox = modal.querySelector('#modal-box');
 
-const ALL_BOX_CLASSES = ['st-modal-wide', 'about-modal-wide', 'contact-modal-compact', 'proj-modal-wide'];
+const ALL_BOX_CLASSES = ['st-modal-wide', 'about-modal-wide', 'contact-modal-compact', 'contact-modal-wide', 'proj-modal-wide'];
 
 function resetModalWidthClasses() {
   if (modalBox) {
@@ -24,5 +24,4 @@ export function openModal(titleHTML, bodyHTML, boxClass = null) {
 
 export function closeModal() {
   modal.classList.remove('open');
-  resetModalWidthClasses();
 }

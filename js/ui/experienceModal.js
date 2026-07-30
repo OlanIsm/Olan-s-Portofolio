@@ -1,5 +1,5 @@
 import { experienceData } from '../data/experienceData.js';
-import { openModal } from './modalManager.js?v=115';
+import { openModal } from './modalManager.js?v=130';
 
 export function openExperienceModal() {
   const titleHTML = `

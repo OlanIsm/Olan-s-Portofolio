@@ -1,4 +1,4 @@
-import { openModal } from './modalManager.js?v=115';
+import { openModal } from './modalManager.js?v=130';
 
 export function openAboutModal() {
   const titleHTML = `
@@ -15,32 +15,9 @@ export function openAboutModal() {
       <!-- Left Column: Hero & Quick Stats -->
       <div class="about-hero-col">
         <div class="about-avatar-box">
-          <svg class="about-avatar-svg" width="110" height="110" viewBox="0 0 100 100" fill="none">
-            <!-- Pixel Character Avatar Frame -->
-            <rect width="100" height="100" fill="#1e1711" rx="8" />
-            <rect x="8" y="8" width="84" height="84" fill="#291f17" rx="6" stroke="#4a3825" stroke-width="2" />
-            <!-- Head & Hair -->
-            <rect x="30" y="20" width="40" height="40" fill="#2d221c" />
-            <rect x="25" y="18" width="50" height="18" fill="#120d09" />
-            <rect x="70" y="22" width="12" height="12" fill="#120d09" rx="2" />
-            <!-- Face -->
-            <rect x="32" y="32" width="36" height="22" fill="#f4c89c" />
-            <!-- Eyes -->
-            <rect x="38" y="38" width="7" height="7" fill="#120d09" />
-            <rect x="42" y="39" width="3" height="3" fill="#ffffff" />
-            <rect x="55" y="38" width="7" height="7" fill="#120d09" />
-            <rect x="59" y="39" width="3" height="3" fill="#ffffff" />
-            <!-- Mask / Collar -->
-            <rect x="30" y="48" width="40" height="12" fill="#1a140e" />
-            <!-- Body / Kimono -->
-            <rect x="25" y="60" width="50" height="32" fill="#3a2a1b" />
-            <rect x="45" y="60" width="10" height="32" fill="#ffd080" />
-            <!-- Lantern Orb -->
-            <circle cx="76" cy="72" r="6" fill="#ffd080" />
-            <circle cx="76" cy="72" r="10" fill="rgba(255, 208, 128, 0.3)" />
-          </svg>
+          <img class="about-avatar-photo" src="img/profilepicture.jpeg" alt="Olan - Insan Maulana">
           <div class="about-name">OLAN</div>
-          <div class="about-role">CS Student & Fullstack Dev</div>
+          <div class="about-role">CS Student &amp; Fullstack Dev</div>
         </div>
 
         <div class="about-stats-card">

@@ -8,13 +8,13 @@ import {
 } from './js/audio/audioManager.js';
 import { createRoomObjects } from './js/objects/roomObjects.js';
 import { loadCharacterModel, updateCharacterWaypoint, animationMixers, setCharacterMoving } from './js/objects/character.js';
-import { openProjectModal } from './js/ui/projectModal.js?v=120';
+import { openProjectModal } from './js/ui/projectModal.js?v=130';
 import { openExperienceModal } from './js/ui/experienceModal.js?v=120';
-import { openContactModal } from './js/ui/contactModal.js?v=120';
-import { openSkillTreeModal } from './js/ui/skillTreeModal.js?v=120';
-import { openAboutModal } from './js/ui/aboutModal.js?v=120';
-import { openHelpModal } from './js/ui/helpModal.js?v=120';
-import { modal, closeModal } from './js/ui/modalManager.js?v=120';
+import { openContactModal } from './js/ui/contactModal.js?v=135';
+import { openSkillTreeModal } from './js/ui/skillTreeModal.js?v=130';
+import { openAboutModal } from './js/ui/aboutModal.js?v=130';
+import { openHelpModal } from './js/ui/helpModal.js?v=130';
+import { modal, closeModal } from './js/ui/modalManager.js?v=135';
 
 // ── INITIALIZE AUDIO ──
 initAudio(camera);

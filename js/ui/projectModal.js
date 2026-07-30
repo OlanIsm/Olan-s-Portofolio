@@ -1,5 +1,5 @@
 import { projectsData } from '../data/projectsData.js';
-import { openModal } from './modalManager.js?v=115';
+import { openModal } from './modalManager.js?v=130';
 
 export function openProjectModal() {
   const titleHTML = `
