@@ -1,4 +1,4 @@
-import { openModal } from './modalManager.js';
+import { openModal } from './modalManager.js?v=115';
 
 export function openContactModal() {
   const titleHTML = `
@@ -58,5 +58,5 @@ export function openContactModal() {
     </div>
   `;
 
-  openModal(titleHTML, bodyHTML);
+  openModal(titleHTML, bodyHTML, 'contact-modal-compact');
 }

@@ -1,4 +1,4 @@
-import { openModal } from './modalManager.js';
+import { openModal } from './modalManager.js?v=115';
 
 export function openHelpModal() {
   const titleHTML = `
@@ -41,6 +41,20 @@ export function openHelpModal() {
             LAPTOP
           </div>
           View Olan's featured web & mobile projects, hackathon entries, and GitHub repos.
+        </div>
+
+        <!-- PC MONITOR -->
+        <div style="background: rgba(0,0,0,0.3); border: 2px solid #3a2a18; padding: 10px;">
+          <div style="color: #ffaa66; font-family: 'Press Start 2P', monospace; font-size: 9px; margin-bottom: 8px; display: flex; align-items: center; gap: 6px;">
+            <svg class="pixel-icon" viewBox="0 0 16 16" style="fill:#ffaa66; width:16px; height:16px;">
+              <rect x="1" y="2" width="14" height="10" />
+              <rect x="2" y="3" width="12" height="8" fill="#241c12" />
+              <rect x="6" y="12" width="4" height="2" />
+              <rect x="4" y="14" width="8" height="1" />
+            </svg>
+            PC MONITOR
+          </div>
+          Read Olan's full biography, CS background, and download the official CV.
         </div>
 
         <!-- BOOKSHELF -->

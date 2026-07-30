@@ -8,12 +8,13 @@ import {
 } from './js/audio/audioManager.js';
 import { createRoomObjects } from './js/objects/roomObjects.js';
 import { loadCharacterModel, updateCharacterWaypoint, animationMixers, setCharacterMoving } from './js/objects/character.js';
-import { openProjectModal } from './js/ui/projectModal.js';
-import { openExperienceModal } from './js/ui/experienceModal.js';
-import { openContactModal } from './js/ui/contactModal.js';
-import { openSkillTreeModal } from './js/ui/skillTreeModal.js';
-import { openHelpModal } from './js/ui/helpModal.js';
-import { modal, closeModal } from './js/ui/modalManager.js';
+import { openProjectModal } from './js/ui/projectModal.js?v=120';
+import { openExperienceModal } from './js/ui/experienceModal.js?v=120';
+import { openContactModal } from './js/ui/contactModal.js?v=120';
+import { openSkillTreeModal } from './js/ui/skillTreeModal.js?v=120';
+import { openAboutModal } from './js/ui/aboutModal.js?v=120';
+import { openHelpModal } from './js/ui/helpModal.js?v=120';
+import { modal, closeModal } from './js/ui/modalManager.js?v=120';
 
 // ── INITIALIZE AUDIO ──
 initAudio(camera);
@@ -158,6 +159,14 @@ function showShelfView() {
   });
 }
 
+function showAboutView() {
+  currentState = 'ABOUT';
+  charAtDesk = false;
+  flyTo(CAM_STATES.ABOUT.pos, CAM_STATES.ABOUT.target, 2.0, () => {
+    openAboutModal();
+  });
+}
+
 function backFromView() {
   if (currentState === 'LAPTOP') {
     if (screenOffSound && screenOffSound.isPlaying) screenOffSound.stop();
@@ -196,6 +205,7 @@ document.querySelectorAll('.menu-item').forEach(item => {
     const action = item.dataset.action;
     if (action === 'enter') { showWorld(); return; }
     if (action === 'projects') { showWorld(); setTimeout(showLaptopView, 800); return; }
+    if (action === 'about') { showWorld(); setTimeout(showAboutView, 800); return; }
     if (action === 'contact') { showWorld(); setTimeout(showPosterView, 800); return; }
   });
   item.addEventListener('mouseenter', () => {
@@ -207,7 +217,7 @@ document.querySelectorAll('.menu-item').forEach(item => {
 backBtn.addEventListener('click', () => {
   if (clickSound && clickSound.isPlaying) clickSound.stop();
   if (clickSound) clickSound.play();
-  if (['LAPTOP', 'PLANT', 'POSTER', 'SHELF'].includes(currentState)) backFromView();
+  if (['LAPTOP', 'ABOUT', 'PLANT', 'POSTER', 'SHELF'].includes(currentState)) backFromView();
   else showMenu();
 });
 backBtn.addEventListener('mouseenter', () => cur.classList.add('hovering'));
@@ -227,7 +237,7 @@ document.getElementById('modal-close').addEventListener('click', () => {
   if (clickSound && clickSound.isPlaying) clickSound.stop();
   if (clickSound) clickSound.play();
   closeModal();
-  if (['LAPTOP', 'PLANT', 'POSTER', 'SHELF'].includes(currentState)) backFromView();
+  if (['LAPTOP', 'ABOUT', 'PLANT', 'POSTER', 'SHELF'].includes(currentState)) backFromView();
 });
 
 modal.addEventListener('click', e => {
@@ -235,7 +245,7 @@ modal.addEventListener('click', e => {
     if (clickSound && clickSound.isPlaying) clickSound.stop();
     if (clickSound) clickSound.play();
     closeModal();
-    if (['LAPTOP', 'PLANT', 'POSTER', 'SHELF'].includes(currentState)) backFromView();
+    if (['LAPTOP', 'ABOUT', 'PLANT', 'POSTER', 'SHELF'].includes(currentState)) backFromView();
   }
 });
 
@@ -279,6 +289,9 @@ renderer.domElement.addEventListener('click', () => {
       }
       else if (obj.userData.id === 'shelf') {
         showShelfView();
+      }
+      else if (obj.userData.id === 'about') {
+        showAboutView();
       }
     }
   }

@@ -1,5 +1,5 @@
 import { projectsData } from '../data/projectsData.js';
-import { openModal } from './modalManager.js';
+import { openModal } from './modalManager.js?v=115';
 
 export function openProjectModal() {
   const titleHTML = `
@@ -31,5 +31,5 @@ export function openProjectModal() {
     `;
   });
 
-  openModal(titleHTML, bodyHTML);
+  openModal(titleHTML, bodyHTML, 'proj-modal-wide');
 }

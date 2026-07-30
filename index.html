@@ -6,7 +6,7 @@
 <title>OLAN.DEV — 3D World</title>
 <meta name="description" content="Portfolio of Olan — CS student at BINUS University. Explore a 3D pixel-art world showcasing projects, skills, and contact info.">
 <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="style.css?v=9">
+<link rel="stylesheet" href="style.css?v=14">
 </head>
 <body>
 
@@ -38,10 +38,9 @@
       <span class="arrow">▶</span>
       <span>VIEW PROJECTS</span>
     </div>
-    <div class="menu-item disabled" data-action="about">
+    <div class="menu-item" data-action="about">
       <span class="arrow">▶</span>
       <span>ABOUT ME</span>
-      <span class="coming-soon">SOON</span>
     </div>
     <div class="menu-item" data-action="contact">
       <span class="arrow">▶</span>
@@ -58,35 +57,28 @@
     <div id="loc-sub">// click objects to interact</div>
   </div>
   <div id="hint-bar" style="position:fixed">
-    <span id="hint-text">[ CLICK ] interact with objects</span>
+    <div id="hint-text">[ CLICK ] interact with objects</div>
   </div>
-  <button id="back-btn" style="position:fixed">◀ BACK</button>
-  <button id="help-btn" style="position:fixed" aria-label="Help / Guide">?</button>
+  <button id="back-btn" style="position:fixed">◄ BACK</button>
+  <button id="help-btn" style="position:fixed" title="Controls & Help">?</button>
 </div>
 
-<!-- MODAL -->
+<!-- MODAL PANEL -->
 <div id="modal">
   <div id="modal-box">
     <div id="modal-header">
-      <div id="modal-title">—</div>
-      <button id="modal-close" aria-label="Close">
-        <svg viewBox="0 0 10 10" width="14" height="14" style="fill:#ffffff; shape-rendering:crispEdges; display:block;">
-          <rect x="0" y="0" width="2" height="1" />
-          <rect x="8" y="0" width="2" height="1" />
-          <rect x="0" y="1" width="3" height="1" />
-          <rect x="7" y="1" width="3" height="1" />
-          <rect x="1" y="2" width="3" height="1" />
-          <rect x="6" y="2" width="3" height="1" />
-          <rect x="2" y="3" width="6" height="1" />
-          <rect x="3" y="4" width="4" height="1" />
-          <rect x="3" y="5" width="4" height="1" />
-          <rect x="2" y="6" width="6" height="1" />
-          <rect x="1" y="7" width="3" height="1" />
-          <rect x="6" y="7" width="3" height="1" />
-          <rect x="0" y="8" width="3" height="1" />
-          <rect x="7" y="8" width="3" height="1" />
-          <rect x="0" y="9" width="2" height="1" />
-          <rect x="8" y="9" width="2" height="1" />
+      <div id="modal-title">MODAL TITLE</div>
+      <button id="modal-close" aria-label="Close modal">
+        <svg class="pixel-icon" viewBox="0 0 16 16" style="margin-right: 0; width: 14px; height: 14px; fill: #ffffff;">
+          <rect x="2" y="2" width="3" height="3" />
+          <rect x="11" y="2" width="3" height="3" />
+          <rect x="5" y="5" width="2" height="2" />
+          <rect x="9" y="5" width="2" height="2" />
+          <rect x="7" y="7" width="2" height="2" />
+          <rect x="5" y="9" width="2" height="2" />
+          <rect x="9" y="9" width="2" height="2" />
+          <rect x="2" y="11" width="3" height="3" />
+          <rect x="11" y="11" width="3" height="3" />
         </svg>
       </button>
     </div>
@@ -103,6 +95,6 @@
 }
 </script>
 
-<script type="module" src="main.js?v=9"></script>
+<script type="module" src="main.js?v=120"></script>
 </body>
 </html>

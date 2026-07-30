@@ -21,6 +21,7 @@ export const CAM_STATES = {
   MENU: { pos: new THREE.Vector3(0, 3.5, 12), target: new THREE.Vector3(0, 3.5, -2) },
   ROOM: { pos: new THREE.Vector3(0, 3.5, 12), target: new THREE.Vector3(0, 3.5, -2) },
   LAPTOP: { pos: new THREE.Vector3(2.5, 5.5, 4), target: new THREE.Vector3(0.8, 2.5, 0.3) },
+  ABOUT: { pos: new THREE.Vector3(-0.3, 4.2, 3.2), target: new THREE.Vector3(-1.5, 2.8, -0.1) },
   PLANT: { pos: new THREE.Vector3(-3.5, 4.5, 0), target: new THREE.Vector3(-5.8, 3.0, -4) },
   POSTER: { pos: new THREE.Vector3(1, 4.5, -3.0), target: new THREE.Vector3(1, 4.5, -6.75) },
   SHELF: { pos: new THREE.Vector3(1.5, 4.5, -1.0), target: new THREE.Vector3(5.0, 2.5, -4.0) },

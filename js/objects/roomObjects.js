@@ -247,7 +247,7 @@ export function createRoomObjects() {
   }
   const tvStand = new THREE.Mesh(new THREE.BoxGeometry(0.15, 0.35, 0.15), M.tv); tvStand.position.set(0, 0.18, 0); tvGroup.add(tvStand);
   const tvBase2 = new THREE.Mesh(new THREE.BoxGeometry(0.8, 0.06, 0.4), M.tv); tvBase2.position.set(0, 0.0, 0); tvGroup.add(tvBase2);
-  tvGroup.userData = { clickable: false, id: 'monitor', label: '' };
+  tvGroup.userData = { clickable: true, id: 'about', label: `<svg class="pixel-icon" viewBox="0 0 16 16"><rect x="3" y="2" width="10" height="12" fill="none" stroke="#ffd080" stroke-width="1.5" /><circle cx="8" cy="6" r="2.5" fill="#ffd080" /><path d="M4 12v-1a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v1" fill="#ffd080" /></svg> ABOUT ME &mdash; Click to view` };
 
   // ── BOOKSHELF (CLICKABLE) ──
   const shelfGroup = new THREE.Group(); shelfGroup.position.set(5, 0, -4); scene.add(shelfGroup);
@@ -348,7 +348,7 @@ export function createRoomObjects() {
     }
   }
 
-  [laptopGroup, posterGroup, shelfGroup, plantG, ceilingBulbG, floorLampL, floorLampR, catGroup].forEach(addSparkle);
+  [laptopGroup, tvGroup, posterGroup, shelfGroup, plantG, ceilingBulbG, floorLampL, floorLampR, catGroup].forEach(addSparkle);
 
   // ── DUST PARTICLES ──
   const particles = [];
@@ -379,6 +379,6 @@ export function createRoomObjects() {
     flLightR,
     interactiveSparkles,
     particles,
-    clickables: [laptopGroup, shelfGroup, posterGroup, plantG, floorLampL, floorLampR, ceilingBulbG, catGroup]
+    clickables: [laptopGroup, tvGroup, shelfGroup, posterGroup, plantG, floorLampL, floorLampR, ceilingBulbG, catGroup]
   };
 }
