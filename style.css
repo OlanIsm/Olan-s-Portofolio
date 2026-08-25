@@ -992,6 +992,7 @@ body {
   display: flex;
   flex-direction: column;
   gap: 14px;
+  align-self: stretch;
 }
 
 .about-avatar-box {
@@ -1007,8 +1008,9 @@ body {
 }
 
 .about-avatar-photo {
-  width: 140px;
-  height: 140px;
+  width: 100%;
+  max-width: 200px;
+  height: 200px;
   object-fit: cover;
   object-position: center top;
   border-radius: 8px;
@@ -1037,20 +1039,23 @@ body {
   background: #1c150e;
   border: 2px solid #3a2a14;
   border-radius: 8px;
-  padding: 12px;
+  padding: 16px;
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 0;
+  flex: 1;
+  justify-content: space-evenly;
 }
 
 .about-stat-item {
   display: flex;
   justify-content: space-between;
-  align-items: center;
+  align-items: flex-start;
   font-family: 'VT323', monospace;
-  font-size: 15px;
+  font-size: 19px;
   border-bottom: 1px dashed #2d2113;
-  padding-bottom: 4px;
+  padding: 8px 0;
+  gap: 8px;
 }
 .about-stat-item:last-child {
   border-bottom: none;
@@ -1059,10 +1064,14 @@ body {
 
 .stat-key {
   color: #8a7458;
+  min-width: 80px;
+  flex-shrink: 0;
+  padding-top: 1px;
 }
 
 .stat-val {
   color: #ffd080;
+  text-align: right;
 }
 
 .stat-val.status-active {

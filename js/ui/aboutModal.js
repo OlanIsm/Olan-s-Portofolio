@@ -7,7 +7,7 @@ export function openAboutModal() {
       <circle cx="8" cy="6" r="2.5" fill="#ffd080" />
       <path d="M4 12v-1a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v1" fill="#ffd080" />
     </svg>
-    ABOUT OLAN &mdash; FULLSTACK & 3D WEB DEVELOPER
+    ABOUT OLAN &mdash; FULLSTACK & WEB DEVELOPER
   `;
 
   const bodyHTML = `
@@ -16,7 +16,7 @@ export function openAboutModal() {
       <div class="about-hero-col">
         <div class="about-avatar-box">
           <img class="about-avatar-photo" src="img/profilepicture.jpeg" alt="Olan - Insan Maulana">
-          <div class="about-name">OLAN</div>
+          <div class="about-name">Insan Maulana (Olan)</div>
           <div class="about-role">CS Student &amp; Fullstack Dev</div>
         </div>
 
@@ -27,7 +27,7 @@ export function openAboutModal() {
           </div>
           <div class="about-stat-item">
             <span class="stat-key">FOCUS</span>
-            <span class="stat-val">Fullstack & 3D Web</span>
+            <span class="stat-val">Web/Mobile Application & DevOps</span>
           </div>
           <div class="about-stat-item">
             <span class="stat-key">LOCATION</span>
@@ -58,14 +58,19 @@ export function openAboutModal() {
             BIOGRAPHY
           </h3>
           <p class="about-bio">
-            Ever since I started programming, I have been deeply passionate about building software and crafting interactive digital experiences. 
-            As a Computer Science student at <span class="hl">BINUS University</span>, I specialize in fullstack web architecture, 
-            modern frontend frameworks, and 3D web applications powered by <span class="hl">Three.js & WebGL</span>.
+            I'm a CS student at <span class="hl">BINUS University</span> specializing in building solid  <span class="hl">Fullstack Systems</span>. I focus in  <span class="hl">Application architecture</span>, ranging from the <span class="hl">Backend design</span> and implementation 
+            using NestJS and PostgreSQL, to the <span class="hl">Mobile Application</span> development using Flutter, and the infrastructure that powers these applications. Believes in writing code that 
+            scale and developer experience. Currently exploring <span class="hl">DevOps workflows and making pixel art</span>.
           </p>
-          <p class="about-bio">
-            I thrive at the intersection of creative design and technical engineering—transforming complex ideas into sleek, 
-            high-performance web systems with immersive user interfaces.
-          </p>
+          
+          <div class="about-quote">
+            <p class="about-quote-text">
+              "Simple is better than complex. But readable is better than simple."
+            </p>
+            <p class="about-quote-author">
+              — David Heinemeier Hansson
+            </p>
+          </div>
         </div>
 
         <div class="about-section">
@@ -75,13 +80,12 @@ export function openAboutModal() {
           </h3>
           <div class="about-tags-group">
             <span class="about-tag">React & Next.js</span>
-            <span class="about-tag">Three.js & WebGL</span>
             <span class="about-tag">TypeScript & JS</span>
             <span class="about-tag">Node.js & NestJS</span>
             <span class="about-tag">Supabase & PostgreSQL</span>
-            <span class="about-tag">Python & Flask</span>
             <span class="about-tag">Git & CI/CD</span>
             <span class="about-tag">UI/UX & Pixel Art</span>
+            <span class="about-tag">Figma & Framer</span>
           </div>
         </div>
 
@@ -107,6 +111,30 @@ export function openAboutModal() {
         </div>
       </div>
     </div>
+
+    <style>
+      .about-quote {
+        margin: 1.5rem 0;
+        padding: 1rem 0;
+      }
+
+      .about-quote-text {
+        font-style: italic;
+        font-weight: 700;
+        color: #ffd080;
+        line-height: 1.6;
+        margin-bottom: 0.75rem;
+        font-size: 1rem;
+      }
+
+      .about-quote-author {
+        font-size: 0.9rem;
+        color: #b0b0b0;
+        font-style: normal;
+        font-weight: 400;
+        text-align: right;
+      }
+    </style>
   `;
 
   openModal(titleHTML, bodyHTML, 'about-modal-wide');
