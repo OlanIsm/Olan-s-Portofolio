@@ -17,7 +17,7 @@ export function openAboutModal() {
         <div class="about-avatar-box">
           <img class="about-avatar-photo" src="img/profilepicture.jpeg" alt="Olan - Insan Maulana">
           <div class="about-name">Insan Maulana (Olan)</div>
-          <div class="about-role">CS Student &amp; Fullstack Dev</div>
+          <div class="about-role">Software Engineer</div>
         </div>
 
         <div class="about-stats-card">
