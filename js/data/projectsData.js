@@ -1,5 +1,14 @@
 export const projectsData = [
   {
+    name: "ADELLIA FLORIST",
+    tag: "FIGMA / VANILLA JS",
+    tagStyle: "border-color:#ff99bb;color:#ff99bb;background:rgba(255,153,187,0.1)",
+    desc: "A boutique landing page for a local bouquet business built with Vanilla JS. Crafted with a Figma design system and Framer animations to sharpen UI/UX design & frontend execution skills.",
+    tech: ["VANILLA JS", "FIGMA", "FRAMER", "HTML/CSS"],
+    img: "img/adelliaflorist.png",
+    url: "https://adelliaflorist.vercel.app/"
+  },
+  {
     name: "ELECTUS ATS + AI CV",
     tag: "IN PROGRESS",
     tagStyle: "border-color:#88ccff;color:#88ccff;background:rgba(136,204,255,0.1)",
@@ -25,15 +34,6 @@ export const projectsData = [
     tech: ["REACT", "NEST.TS", "POSTGRE", "GEMINI API"],
     img: "img/mockupDompetrack.jpg",
     url: "https://dompetrack.vercel.app"
-  },
-  {
-    name: "ADELLIA FLORIST",
-    tag: "FIGMA / VANILLA JS",
-    tagStyle: "border-color:#ff99bb;color:#ff99bb;background:rgba(255,153,187,0.1)",
-    desc: "A boutique landing page for a local bouquet business built with Vanilla JS. Crafted with a Figma design system and Framer animations to sharpen UI/UX design & frontend execution skills.",
-    tech: ["VANILLA JS", "FIGMA", "FRAMER", "HTML/CSS"],
-    img: "img/adelliaflorist.png",
-    url: "https://github.com/OlanIsm/adelliaFlorist"
   },
   {
     name: "OLAN.DEV (PORTFOLIO)",
