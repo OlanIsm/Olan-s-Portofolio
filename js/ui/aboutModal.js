@@ -27,7 +27,7 @@ export function openAboutModal() {
           </div>
           <div class="about-stat-item">
             <span class="stat-key">FOCUS</span>
-            <span class="stat-val">Web/Mobile Application & DevOps</span>
+            <span class="stat-val">Software & AI Engineering</span>
           </div>
           <div class="about-stat-item">
             <span class="stat-key">LOCATION</span>
@@ -58,9 +58,7 @@ export function openAboutModal() {
             BIOGRAPHY
           </h3>
           <p class="about-bio">
-            I'm a CS student at <span class="hl">BINUS University</span> specializing in building solid  <span class="hl">Fullstack Systems</span>. I focus in  <span class="hl">Application architecture</span>, ranging from the <span class="hl">Backend design</span> and implementation 
-            using NestJS and PostgreSQL, to the <span class="hl">Mobile Application</span> development using Flutter, and the infrastructure that powers these applications. Believes in writing code that 
-            scale and developer experience. Currently exploring <span class="hl">DevOps workflows and making pixel art</span>.
+            I'm a CS student at <span class="hl">BINUS University</span> with a strong passion for <span class="hl">Software Engineering</span> and <span class="hl">AI Engineering</span>. I focus on developing scalable <span class="hl">Web & Mobile Applications</span>, spanning from modern frontend architectures and intelligent backend integrations to performant cross-platform mobile solutions. Believes in writing clean, scalable code with exceptional developer and user experience. Currently exploring <span class="hl">Applied AI and creative coding</span>.
           </p>
           
           <div class="about-quote">
