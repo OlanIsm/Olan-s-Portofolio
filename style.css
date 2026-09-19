@@ -707,6 +707,26 @@ button:focus-visible, a:focus-visible { outline: 2px solid #ffe6a3; outline-offs
 .proj-tech { display:flex; gap:6px; flex-wrap:wrap; margin-top:12px; }
 .tech-chip { font-size:6px; padding:3px 7px; background:#1a140e; border:2px solid #4a3a20; color:#a08050; }
 
+@media (max-width: 768px) {
+  .proj-card-row {
+    flex-direction: column;
+    padding: 14px;
+    gap: 14px;
+  }
+  .proj-card-img {
+    order: 1;
+    flex: none;
+    width: 100%;
+    height: clamp(140px, 45vw, 220px);
+    justify-content: center;
+  }
+  .proj-card-info {
+    order: 2;
+    flex: none;
+    width: 100%;
+  }
+}
+
 /* ── NEW CONTACT & SOCIALS GRID (COMPACT NON-SCROLLABLE FOR CONTACT PAGE ONLY) ── */
 #modal-box.contact-modal-compact {
   max-width: 660px;
