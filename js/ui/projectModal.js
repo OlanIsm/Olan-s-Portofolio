@@ -25,7 +25,7 @@ export function openProjectModal() {
           <div class="proj-tech">${techChips}</div>
         </div>
         <div class="proj-card-img" style="background: #120e0a;">
-          <img src="${p.img}" alt="${p.name}" style="object-fit: contain;">
+          <img src="${p.img}" alt="${p.name}" loading="lazy" decoding="async" style="object-fit: contain;">
         </div>
       </div>
     `;

@@ -16,7 +16,7 @@ export function openExperienceModal() {
     const tagStyle = item.tagStyle ? `style="${item.tagStyle}"` : '';
     cardsHTML += `
       <div class="exp-card">
-        <div class="exp-card-img"><img src="${item.img}" alt="${item.title}"></div>
+        <div class="exp-card-img"><img src="${item.img}" alt="${item.title}" loading="lazy" decoding="async"></div>
         <div class="exp-card-content">
           <div class="exp-card-tag" ${tagStyle}>${item.tag}</div>
           <div class="exp-card-title">${item.title}</div>

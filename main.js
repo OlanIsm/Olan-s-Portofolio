@@ -1,33 +1,79 @@
 import * as THREE from 'three';
 import {
-  renderer, scene, camera, CAM_STATES, camTarget, composer, outlinePass, visitedOutlinePass,
-  tvLight, lampLight
+  renderer, scene, camera, CAM_STATES, camTarget, composer, outlinePass,
+  tvLight, lampLight, dirLight, windowLightAmb, ambient, setSceneAtmosphere, reducedMotion, resizeRenderer
 } from './js/scene/sceneSetup.js';
 import {
-  initAudio, catSound, clickSound, bushSound, bushRevSound, kbSound, screenUpSound, screenOffSound, playLampSfx, startBgMusic
+  initAudio, catSound, clickSound, bushSound, bushRevSound, kbSound, screenUpSound, screenOffSound, playLampSfx, startBgMusic,
+  playWhooshSfx, playDoorSfx, playLightPopSfx
 } from './js/audio/audioManager.js';
 import { createRoomObjects } from './js/objects/roomObjects.js';
-import { loadCharacterModel, updateCharacterWaypoint, animationMixers, setCharacterMoving } from './js/objects/character.js';
-import { openProjectModal } from './js/ui/projectModal.js?v=130';
-import { openExperienceModal } from './js/ui/experienceModal.js?v=120';
+import {
+  createExteriorScene, updateExterior, openFrontDoor, resetFrontDoor, setExteriorActive
+} from './js/scene/exteriorScene.js';
+import { batchStatic } from './js/scene/sceneUtils.js';
+import { characterGroup, loadCharacterModel, updateCharacterWaypoint, animationMixers, setCharacterMoving } from './js/objects/character.js';
+import { openProjectModal } from './js/ui/projectModal.js?v=156';
+import { openExperienceModal } from './js/ui/experienceModal.js?v=156';
 import { openContactModal } from './js/ui/contactModal.js?v=135';
 import { openSkillTreeModal } from './js/ui/skillTreeModal.js?v=130';
 import { openAboutModal } from './js/ui/aboutModal.js?v=130';
 import { openHelpModal } from './js/ui/helpModal.js?v=130';
 import { modal, closeModal } from './js/ui/modalManager.js?v=135';
 
+const assetsReady = new Promise(resolve => { THREE.DefaultLoadingManager.onLoad = resolve; });
+
 // ── INITIALIZE AUDIO ──
 initAudio(camera);
 
-// ── CREATE ENVIRONMENT & CHARACTER ──
+// ── CREATE 2 SEPARATE CONTAINERS (EXTERIOR & ROOM) ──
+const preRoomChildren = new Set(scene.children);
 const room = createRoomObjects();
+const roomChildren = scene.children.filter(c => !preRoomChildren.has(c));
+
+export const roomContainer = new THREE.Group();
+roomContainer.name = 'RoomContainer';
+roomChildren.forEach(child => roomContainer.add(child));
+scene.add(roomContainer);
+batchStatic(roomContainer, [...room.clickables, ...room.interactiveSparkles]);
+
 loadCharacterModel();
+roomContainer.add(characterGroup);
+
+createExteriorScene(scene);
+// Authored hex colors are sRGB. GLTFLoader already converts imported model colors.
+const authoredMaterials = new Set();
+scene.traverse(object => {
+  if (object.material) {
+    (Array.isArray(object.material) ? object.material : [object.material]).forEach(material => authoredMaterials.add(material));
+  }
+});
+authoredMaterials.forEach(material => {
+  material.color?.convertSRGBToLinear();
+  material.emissive?.convertSRGBToLinear();
+});
+
+export function setRoomActive(isActive) {
+  roomContainer.visible = isActive;
+  [tvLight, lampLight, windowLightAmb, dirLight, ambient].forEach(light => { light.visible = isActive; });
+  tvLight.intensity = isActive ? 0.6 : 0;
+  lampLight.intensity = isActive ? 1.2 : 0;
+  windowLightAmb.intensity = isActive ? 0.5 : 0;
+  dirLight.intensity = isActive ? 0.75 : 0;
+}
+
+// Initial state: Outside active, Room inactive
+setExteriorActive(true);
+setRoomActive(false);
+setSceneAtmosphere(true);
 
 // ── APP STATE ──
-let currentState = 'MENU';
+let currentState = 'OUTSIDE';
 let charAtDesk = false;
 const visitedInteractives = new Set();
 let hoveredObj = null;
+let enteringWorld = false;
+let lastEnterTime = 0;
 
 // ── UI ELEMENTS ──
 const menuEl = document.getElementById('menu');
@@ -38,6 +84,10 @@ const backBtn = document.getElementById('back-btn');
 const helpBtn = document.getElementById('help-btn');
 const label = document.getElementById('obj-label');
 const cur = document.getElementById('cur');
+const roomNav = document.getElementById('room-nav');
+document.body.dataset.scene = 'OUTSIDE';
+menuEl.inert = true;
+hudEl.inert = true;
 
 // ── RAYCASTING ──
 const raycaster = new THREE.Raycaster();
@@ -53,13 +103,11 @@ function getClickable(obj) {
 }
 
 function updateOutlineSelection() {
-  if (currentState !== 'ROOM') {
-    outlinePass.selectedObjects = [];
-    visitedOutlinePass.selectedObjects = [];
-    return;
+  outlinePass.enabled = currentState === 'ROOM' && !camAnimating && !enteringWorld && !!hoveredObj;
+  if (outlinePass.selectedObjects[0] !== (outlinePass.enabled ? hoveredObj : undefined)) {
+    outlinePass.selectedObjects = outlinePass.enabled ? [hoveredObj] : [];
   }
-  outlinePass.selectedObjects = room.clickables.filter(obj => !visitedInteractives.has(obj));
-  visitedOutlinePass.selectedObjects = room.clickables.filter(obj => visitedInteractives.has(obj));
+  room.interactiveSparkles.forEach(s => { s.visible = !visitedInteractives.has(s.userData.object); });
 }
 
 // ── CAMERA ANIMATION ──
@@ -71,74 +119,204 @@ const camStartTarget = new THREE.Vector3();
 let camT = 0;
 let camDuration = 2.2;
 let camOnDone = null;
+let camOnUpdate = null;
 
-function flyTo(pos, target, duration = 2.2, onDone = null) {
+function flyTo(pos, target, duration = 1.0, onDone = null, onUpdate = null) {
   camStartPos.copy(camera.position);
   camStartTarget.copy(camTarget);
   camDestPos.copy(pos);
   camDestTarget.copy(target);
   camT = 0;
   camAnimating = true;
-  camDuration = duration;
+  camDuration = reducedMotion.matches ? 0.01 : duration;
   camOnDone = onDone;
+  camOnUpdate = onUpdate;
+  hoveredObj = null;
+  label.style.opacity = '0';
+  updateOutlineSelection();
 }
 
 function easeInOutCubic(t) {
   return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
 }
 
+// ── LIGHT POP TRANSITION ──
+const lightPopEl = document.getElementById('light-pop');
+
+async function triggerLightPop(onPeak, onDone) {
+  playLightPopSfx();
+  const cover = lightPopEl.animate([{ opacity: 0 }, { opacity: 1 }], {
+    duration: reducedMotion.matches ? 160 : 220, easing: 'ease-in', fill: 'forwards'
+  });
+  await cover.finished;
+  lightPopEl.style.opacity = '1';
+  cover.cancel();
+  onPeak?.();
+  // Draw the destination while fully covered, before starting the reveal.
+  renderer.render(scene, camera);
+  await new Promise(requestAnimationFrame);
+  const reveal = lightPopEl.animate([{ opacity: 1 }, { opacity: 0 }], {
+    duration: reducedMotion.matches ? 180 : 380, easing: 'cubic-bezier(0.16, 1, 0.3, 1)', fill: 'forwards'
+  });
+  await reveal.finished;
+  lightPopEl.style.opacity = '0';
+  reveal.cancel();
+  onDone?.();
+}
+
 // ── NAVIGATION & VIEWS ──
 function showWorld() {
   currentState = 'ROOM';
+  document.body.dataset.scene = 'ROOM';
+  setExteriorActive(false);
+  setRoomActive(true);
+  setSceneAtmosphere(false);
   updateOutlineSelection();
   setCharacterMoving(false);
+  menuEl.classList.remove('visible', 'pop-in');
   menuEl.style.opacity = '0';
   menuEl.style.transform = 'scale(0.95)';
-  setTimeout(() => { menuEl.style.pointerEvents = 'none'; }, 700);
+  menuEl.style.pointerEvents = 'none';
+  menuEl.inert = true;
+  hudEl.inert = false;
   hudEl.style.opacity = '1';
   hud_loc.style.display = 'block';
   hud_hint.style.display = 'block';
   backBtn.style.display = 'block';
+  backBtn.textContent = '◄ OUTSIDE';
   if (helpBtn) helpBtn.style.display = 'flex';
+  roomNav.hidden = false;
 }
 
-function showMenu() {
-  currentState = 'MENU';
-  updateOutlineSelection();
-  hudEl.style.opacity = '0';
-  backBtn.style.display = 'none';
-  if (helpBtn) helpBtn.style.display = 'none';
-  charAtDesk = false;
+function enterWorldSequence(directAction = null) {
+  if (enteringWorld || camAnimating) return;
+  enteringWorld = true;
+  currentState = 'TRANSITION';
+  document.body.dataset.scene = 'TRANSITION';
+  menuEl.inert = true;
+
+  // 1. Hide Menu
+  menuEl.classList.remove('visible', 'pop-in');
+  menuEl.style.opacity = '0';
+  menuEl.style.pointerEvents = 'none';
+  menuEl.style.transform = 'scale(0.92)';
+
+  // 2. Ensure exterior is active and door closed
+  setExteriorActive(true);
+  resetFrontDoor();
+
+  // 3. Play Whoosh SFX & fly rapidly to front door
+  playWhooshSfx();
+  flyTo(CAM_STATES.FRONT_DOOR.pos, CAM_STATES.FRONT_DOOR.target, 1.05, () => {
+    // 4. At Front Door: Play door open SFX & swing door open
+    playDoorSfx(true);
+    openFrontDoor(reducedMotion.matches ? 0.01 : 0.48);
+
+    // 5. Dive into doorway and trigger LIGHT POP!
+    let covered = false;
+    flyTo(CAM_STATES.DOOR_INSIDE.pos, CAM_STATES.DOOR_INSIDE.target, 0.5, null, progress => {
+      if (covered || progress < 0.23) return;
+      covered = true;
+      triggerLightPop(() => {
+        // AT PEAK OF LIGHT POP:
+        camAnimating = false;
+        camOnDone = null;
+        camOnUpdate = null;
+        // Turn off exterior container and all outdoor lights completely!
+        setExteriorActive(false);
+        // Turn on room container and room lights!
+        setRoomActive(true);
+        // Reset atmosphere to original room fog & clear color
+        setSceneAtmosphere(false);
+
+        // Put camera in original room view
+        camera.position.copy(CAM_STATES.ROOM.pos);
+        camTarget.copy(CAM_STATES.ROOM.target);
+        camera.lookAt(camTarget);
+
+        // Show original room world
+        showWorld();
+        lastEnterTime = performance.now();
+      }, () => {
+        enteringWorld = false;
+        if (directAction === 'projects') showLaptopView();
+        else if (directAction === 'about') showAboutView();
+        else if (directAction === 'contact') showPosterView();
+        else roomNav.querySelector('button').focus({ preventScroll: true });
+      });
+    });
+  });
+}
+
+function showOutside() {
+  if (camAnimating || enteringWorld) return;
+  enteringWorld = true;
   closeModal();
   hoveredObj = null;
   label.style.opacity = '0';
   cur.classList.remove('hovering');
-  flyTo(CAM_STATES.MENU.pos, CAM_STATES.MENU.target, 1.8, () => {
-    menuEl.style.opacity = '1';
+  currentState = 'TRANSITION';
+  document.body.dataset.scene = 'TRANSITION';
+  hudEl.inert = true;
+  hudEl.style.opacity = '0';
+  roomNav.hidden = true;
+  updateOutlineSelection();
+
+  triggerLightPop(() => {
+    // AT PEAK OF LIGHT POP:
+    camAnimating = false;
+    // 1. Turn off room container and room lights
+    setRoomActive(false);
+    // 2. Re-activate exterior container and outdoor lights
+    setExteriorActive(true);
+    // 3. Set atmosphere back to exterior sky
+    setSceneAtmosphere(true);
+    // 4. Reset front door
+    resetFrontDoor();
+    // 5. Place camera back in 3/4 aerial view
+    camera.position.copy(CAM_STATES.OUTSIDE.pos);
+    camTarget.copy(CAM_STATES.OUTSIDE.target);
+    camera.lookAt(camTarget);
+    // 6. Update state & UI
+    currentState = 'OUTSIDE';
+    document.body.dataset.scene = 'OUTSIDE';
+    updateOutlineSelection();
+    hudEl.style.opacity = '0';
+    backBtn.style.display = 'none';
+    if (helpBtn) helpBtn.style.display = 'none';
+    menuEl.style.opacity = '';
     menuEl.style.transform = '';
-    menuEl.style.pointerEvents = '';
+    menuEl.classList.remove('pop-in');
+    void menuEl.offsetWidth;
+    menuEl.classList.add('visible', 'pop-in');
+    menuEl.style.pointerEvents = 'auto';
+    menuEl.inert = false;
+  }, () => {
+    enteringWorld = false;
+    document.querySelector('[data-action="enter"]').focus({ preventScroll: true });
   });
 }
+
 
 function showLaptopView() {
   currentState = 'LAPTOP';
   charAtDesk = false;
-  flyTo(CAM_STATES.LAPTOP.pos, CAM_STATES.LAPTOP.target, 2.0, () => {
+  backBtn.textContent = '◄ BACK';
+  flyTo(CAM_STATES.LAPTOP.pos, CAM_STATES.LAPTOP.target, 0.9, () => {
     if (kbSound && kbSound.isPlaying) kbSound.stop();
-    if (kbSound) kbSound.play();
+    if (kbSound?.buffer) kbSound.play();
 
-    setTimeout(() => {
-      if (screenUpSound && screenUpSound.isPlaying) screenUpSound.stop();
-      if (screenUpSound) screenUpSound.play();
-      openProjectModal();
-    }, 600);
+    if (screenUpSound && screenUpSound.isPlaying) screenUpSound.stop();
+    if (screenUpSound?.buffer) screenUpSound.play();
+    openProjectModal();
   });
 }
 
 function showPlantView() {
   currentState = 'PLANT';
   charAtDesk = false;
-  flyTo(CAM_STATES.PLANT.pos, CAM_STATES.PLANT.target, 2.0, () => {
+  backBtn.textContent = '◄ BACK';
+  flyTo(CAM_STATES.PLANT.pos, CAM_STATES.PLANT.target, 0.9, () => {
     openSkillTreeModal();
   });
 }
@@ -146,7 +324,8 @@ function showPlantView() {
 function showPosterView() {
   currentState = 'POSTER';
   charAtDesk = false;
-  flyTo(CAM_STATES.POSTER.pos, CAM_STATES.POSTER.target, 2.0, () => {
+  backBtn.textContent = '◄ BACK';
+  flyTo(CAM_STATES.POSTER.pos, CAM_STATES.POSTER.target, 0.9, () => {
     openContactModal();
   });
 }
@@ -154,7 +333,8 @@ function showPosterView() {
 function showShelfView() {
   currentState = 'SHELF';
   charAtDesk = false;
-  flyTo(CAM_STATES.SHELF.pos, CAM_STATES.SHELF.target, 2.0, () => {
+  backBtn.textContent = '◄ BACK';
+  flyTo(CAM_STATES.SHELF.pos, CAM_STATES.SHELF.target, 0.9, () => {
     openExperienceModal();
   });
 }
@@ -162,7 +342,8 @@ function showShelfView() {
 function showAboutView() {
   currentState = 'ABOUT';
   charAtDesk = false;
-  flyTo(CAM_STATES.ABOUT.pos, CAM_STATES.ABOUT.target, 2.0, () => {
+  backBtn.textContent = '◄ BACK';
+  flyTo(CAM_STATES.ABOUT.pos, CAM_STATES.ABOUT.target, 0.9, () => {
     openAboutModal();
   });
 }
@@ -170,11 +351,11 @@ function showAboutView() {
 function backFromView() {
   if (currentState === 'LAPTOP') {
     if (screenOffSound && screenOffSound.isPlaying) screenOffSound.stop();
-    if (screenOffSound) screenOffSound.play();
+    if (screenOffSound?.buffer) screenOffSound.play();
   }
   if (currentState === 'PLANT') {
     if (bushRevSound && bushRevSound.isPlaying) bushRevSound.stop();
-    if (bushRevSound) bushRevSound.play();
+    if (bushRevSound?.buffer) bushRevSound.play();
   }
 
   closeModal();
@@ -183,11 +364,12 @@ function backFromView() {
   hoveredObj = null;
   label.style.opacity = '0';
   cur.classList.remove('hovering');
-  flyTo(CAM_STATES.ROOM.pos, CAM_STATES.ROOM.target, 1.8);
+  backBtn.textContent = '◄ OUTSIDE';
+  flyTo(CAM_STATES.ROOM.pos, CAM_STATES.ROOM.target, 0.85);
 }
 
 // ── EVENT LISTENERS ──
-document.addEventListener('mousemove', e => {
+document.addEventListener('pointermove', e => {
   cur.style.left = e.clientX - 7 + 'px';
   cur.style.top = e.clientY - 7 + 'px';
   mouse.x = (e.clientX / window.innerWidth) * 2 - 1;
@@ -199,14 +381,14 @@ document.addEventListener('mousemove', e => {
 // Menu item clicks
 document.querySelectorAll('.menu-item').forEach(item => {
   item.addEventListener('click', () => {
-    if (item.classList.contains('disabled')) return;
+    if (item.classList.contains('disabled') || enteringWorld || camAnimating) return;
     if (clickSound && clickSound.isPlaying) clickSound.stop();
-    if (clickSound) clickSound.play();
+    if (clickSound?.buffer) clickSound.play();
     const action = item.dataset.action;
-    if (action === 'enter') { showWorld(); return; }
-    if (action === 'projects') { showWorld(); setTimeout(showLaptopView, 800); return; }
-    if (action === 'about') { showWorld(); setTimeout(showAboutView, 800); return; }
-    if (action === 'contact') { showWorld(); setTimeout(showPosterView, 800); return; }
+    if (action === 'enter') { enterWorldSequence(null); return; }
+    if (action === 'projects') { enterWorldSequence('projects'); return; }
+    if (action === 'about') { enterWorldSequence('about'); return; }
+    if (action === 'contact') { enterWorldSequence('contact'); return; }
   });
   item.addEventListener('mouseenter', () => {
     if (!item.classList.contains('disabled')) cur.classList.add('hovering');
@@ -215,18 +397,23 @@ document.querySelectorAll('.menu-item').forEach(item => {
 });
 
 backBtn.addEventListener('click', () => {
+  if (enteringWorld) return;
   if (clickSound && clickSound.isPlaying) clickSound.stop();
-  if (clickSound) clickSound.play();
-  if (['LAPTOP', 'ABOUT', 'PLANT', 'POSTER', 'SHELF'].includes(currentState)) backFromView();
-  else showMenu();
+  if (clickSound?.buffer) clickSound.play();
+  if (['LAPTOP', 'ABOUT', 'PLANT', 'POSTER', 'SHELF'].includes(currentState)) {
+    backFromView();
+  } else {
+    showOutside();
+  }
 });
+
 backBtn.addEventListener('mouseenter', () => cur.classList.add('hovering'));
 backBtn.addEventListener('mouseleave', () => cur.classList.remove('hovering'));
 
 if (helpBtn) {
   helpBtn.addEventListener('click', () => {
     if (clickSound && clickSound.isPlaying) clickSound.stop();
-    if (clickSound) clickSound.play();
+    if (clickSound?.buffer) clickSound.play();
     openHelpModal();
   });
   helpBtn.addEventListener('mouseenter', () => cur.classList.add('hovering'));
@@ -235,7 +422,7 @@ if (helpBtn) {
 
 document.getElementById('modal-close').addEventListener('click', () => {
   if (clickSound && clickSound.isPlaying) clickSound.stop();
-  if (clickSound) clickSound.play();
+  if (clickSound?.buffer) clickSound.play();
   closeModal();
   if (['LAPTOP', 'ABOUT', 'PLANT', 'POSTER', 'SHELF'].includes(currentState)) backFromView();
 });
@@ -243,19 +430,18 @@ document.getElementById('modal-close').addEventListener('click', () => {
 modal.addEventListener('click', e => {
   if (e.target === modal) {
     if (clickSound && clickSound.isPlaying) clickSound.stop();
-    if (clickSound) clickSound.play();
+    if (clickSound?.buffer) clickSound.play();
     closeModal();
     if (['LAPTOP', 'ABOUT', 'PLANT', 'POSTER', 'SHELF'].includes(currentState)) backFromView();
   }
 });
 
 // World clicks
-renderer.domElement.addEventListener('click', () => {
-  if (currentState !== 'ROOM' || camAnimating) return;
+renderer.domElement.addEventListener('click', e => {
+  mouse.set(e.clientX / window.innerWidth * 2 - 1, -(e.clientY / window.innerHeight) * 2 + 1);
+  if (modal.classList.contains('open') || currentState !== 'ROOM' || camAnimating || enteringWorld || (performance.now() - lastEnterTime < 500)) return;
   raycaster.setFromCamera(mouse, camera);
-  const hits = raycaster.intersectObjects(
-    room.clickables.flatMap(g => { const arr = [g]; g.traverse(c => { if (c !== g) arr.push(c); }); return arr; })
-  );
+  const hits = raycaster.intersectObjects(room.clickables, true);
   if (hits.length > 0) {
     const obj = getClickable(hits[0].object);
     if (obj) {
@@ -267,7 +453,7 @@ renderer.domElement.addEventListener('click', () => {
         showPlantView();
         setTimeout(() => {
           if (bushSound && bushSound.isPlaying) bushSound.stop();
-          if (bushSound) bushSound.play();
+          if (bushSound?.buffer) bushSound.play();
         }, 200);
       }
       else if (obj.userData.id === 'lamp') {
@@ -282,7 +468,7 @@ renderer.domElement.addEventListener('click', () => {
       }
       else if (obj.userData.id === 'cat') {
         if (catSound && catSound.isPlaying) catSound.stop();
-        if (catSound) catSound.play();
+        if (catSound?.buffer) catSound.play();
       }
       else if (obj.userData.id === 'poster') {
         showPosterView();
@@ -297,83 +483,105 @@ renderer.domElement.addEventListener('click', () => {
   }
 });
 
-window.addEventListener('resize', () => {
-  camera.aspect = window.innerWidth / window.innerHeight;
-  camera.updateProjectionMatrix();
-  renderer.setSize(window.innerWidth, window.innerHeight);
-  composer.setSize(window.innerWidth, window.innerHeight);
-  outlinePass.setSize(window.innerWidth, window.innerHeight);
-  visitedOutlinePass.setSize(window.innerWidth, window.innerHeight);
+const roomActions = { laptop: showLaptopView, about: showAboutView, plant: showPlantView, shelf: showShelfView, poster: showPosterView };
+roomNav.addEventListener('click', e => {
+  const button = e.target.closest('[data-view]');
+  if (!button || enteringWorld || camAnimating || currentState !== 'ROOM') return;
+  const object = room.clickables.find(obj => obj.userData.id === button.dataset.view);
+  visitedInteractives.add(object);
+  roomActions[button.dataset.view]();
+});
+document.addEventListener('keydown', e => {
+  if (e.key !== 'Escape' || enteringWorld) return;
+  if (modal.classList.contains('open') && currentState === 'ROOM') closeModal();
+  else if (currentState !== 'OUTSIDE' && currentState !== 'ROOM') backFromView();
 });
 
-// ── ANIMATION LOOP ──
+let needsFrame = true;
+window.addEventListener('resize', () => {
+  renderScale = 1;
+  resizeRenderer();
+  if (!camAnimating && CAM_STATES[currentState]) {
+    camera.position.copy(CAM_STATES[currentState].pos);
+    camTarget.copy(CAM_STATES[currentState].target);
+    camera.lookAt(camTarget);
+  }
+  needsFrame = true;
+});
+
+// Only the visible world advances. Shadows update at 10 Hz; the camera stays smooth.
 const clock = new THREE.Clock();
-
+let lastShadowUpdate = 0;
+let lastHoverCheck = 0;
+let renderScale = 1;
+let frameTotal = 0, frameCount = 0;
+const hoverDevice = window.matchMedia('(hover: hover)');
 function animate() {
-  requestAnimationFrame(animate);
-  const dt = clock.getDelta();
-  const t = clock.getElapsedTime();
+  const rawDelta = clock.getDelta();
+  const dt = Math.min(rawDelta, 0.05);
+  const t = clock.elapsedTime;
+  if (modal.classList.contains('open') && !camAnimating && !needsFrame) return;
+  needsFrame = false;
 
-  animationMixers.forEach(mixer => mixer.update(dt));
-
-  // Particle float
-  room.particles.forEach(p => {
-    p.position.y += Math.sin(t * 0.8 + p.userData.phase) * 0.003;
-    p.position.x += Math.sin(t * 0.5 + p.userData.phase) * 0.001;
-    if (p.position.y > 7) p.position.y = 0.3;
-    if (p.position.y < 0.1) p.position.y = 6.8;
-    p.rotation.x += 0.01; p.rotation.y += 0.015;
-  });
-
-  // Light flickers
-  tvLight.intensity = 0.6 + Math.sin(t * 7.3) * 0.1 + Math.sin(t * 13.1) * 0.03;
-  lampLight.intensity = 1.2 + Math.sin(t * 2.1) * 0.1;
-  if (room.ceilingBulbG.userData.on) {
-    room.ceilingLight.intensity = room.ceilingBulbG.userData.baseLightInt + Math.sin(t * 2.2) * 0.06;
+  updateExterior(dt, t);
+  if (roomContainer.visible && !reducedMotion.matches) {
+    animationMixers.forEach(mixer => mixer.update(dt));
+    updateCharacterWaypoint(dt, t, charAtDesk);
+    room.particles.rotation.y = Math.sin(t * 0.08) * 0.06;
+    room.particles.position.y = Math.sin(t * 0.3) * 0.1;
+    room.plantCrown.rotation.z = Math.sin(t * 0.65) * 0.025;
+    room.interactiveSparkles.forEach(s => {
+      s.position.y = s.userData.baseY + Math.sin(t * s.userData.speed + s.userData.phase) * 0.1;
+      s.rotation.y += dt * 0.7;
+    });
+    tvLight.intensity = 0.6 + Math.sin(t * 1.7) * 0.035;
   }
-  if (room.floorLampL.userData.on) {
-    room.flLightL.intensity = 1.2 + Math.sin(t * 1.8) * 0.08;
-  }
-  if (room.floorLampR.userData.on) {
-    room.flLightR.intensity = 1.2 + Math.sin(t * 1.8 + 1.5) * 0.08;
-  }
-
-  // Sparkles
-  room.interactiveSparkles.forEach(s => {
-    s.position.y = s.userData.baseY + Math.sin(t * s.userData.speed + s.userData.phase) * 0.2;
-    s.rotation.x += 0.02;
-    s.rotation.y += 0.02;
-  });
-
-  // Character movement
-  updateCharacterWaypoint(dt, t, charAtDesk);
 
   // Camera fly animation
   if (camAnimating) {
-    camT += dt / camDuration;
+    camT += Math.min(rawDelta, 0.1) / camDuration;
     const et = easeInOutCubic(Math.min(camT, 1));
     camera.position.lerpVectors(camStartPos, camDestPos, et);
     camTarget.lerpVectors(camStartTarget, camDestTarget, et);
     camera.lookAt(camTarget);
+    camOnUpdate?.(Math.min(camT, 1));
     if (camT >= 1) {
+      camOnUpdate = null;
       camAnimating = false;
-      if (camOnDone) { camOnDone(); camOnDone = null; }
+      if (camOnDone) {
+        const cb = camOnDone;
+        camOnDone = null;
+        cb();
+      }
     }
   }
 
   // Gentle camera float
-  if (!camAnimating && (currentState === 'MENU' || currentState === 'ROOM')) {
-    const basePos = CAM_STATES.MENU.pos;
-    camera.position.x = basePos.x + Math.sin(t * 0.4) * 0.3;
-    camera.position.y = basePos.y + Math.sin(t * 0.3) * 0.2;
-    camera.lookAt(camTarget);
+  if (!camAnimating && !enteringWorld && !reducedMotion.matches) {
+    if (currentState === 'OUTSIDE') {
+      const basePos = CAM_STATES.OUTSIDE.pos;
+      camera.position.x = basePos.x + Math.sin(t * 0.3) * 0.5;
+      camera.position.y = basePos.y + Math.sin(t * 0.2) * 0.3;
+      camera.position.z = basePos.z;
+      camTarget.copy(CAM_STATES.OUTSIDE.target);
+      camera.lookAt(camTarget);
+    } else if (currentState === 'ROOM') {
+      const basePos = CAM_STATES.ROOM.pos;
+      camera.position.x = basePos.x + Math.sin(t * 0.4) * 0.3;
+      camera.position.y = basePos.y + Math.sin(t * 0.3) * 0.2;
+      camera.position.z = basePos.z;
+      camTarget.copy(CAM_STATES.ROOM.target);
+      camera.lookAt(camTarget);
+    }
   }
 
+
+
   // Hover detection in ROOM state
-  if (currentState === 'ROOM' && !camAnimating) {
+  if (currentState === 'ROOM' && !camAnimating && !enteringWorld && hoverDevice.matches && t - lastHoverCheck > 1 / 30) {
+    lastHoverCheck = t;
     raycaster.setFromCamera(mouse, camera);
-    const allObjs = room.clickables.flatMap(g => { const arr = [g]; g.traverse(c => { if (c !== g) arr.push(c); }); return arr; });
-    const hits = raycaster.intersectObjects(allObjs);
+    const hits = raycaster.intersectObjects(room.clickables, true);
     if (hits.length > 0) {
       const obj = getClickable(hits[0].object);
       if (obj && obj !== hoveredObj) {
@@ -396,20 +604,71 @@ function animate() {
     }
   }
 
-  composer.render();
+  updateOutlineSelection();
+  if (t - lastShadowUpdate > 0.1 && (!reducedMotion.matches || enteringWorld)) {
+    renderer.shadowMap.needsUpdate = true;
+    lastShadowUpdate = t;
+  }
+  if (outlinePass.enabled) composer.render();
+  else renderer.render(scene, camera);
+
+  if (!enteringWorld && rawDelta < 0.12) {
+    frameTotal += rawDelta;
+    if (++frameCount >= 120) {
+      // ponytail: lower resolution only; reset on resize to avoid quality oscillation.
+      if (frameTotal / frameCount > 0.025 && renderScale > 0.7) {
+        renderScale = Math.max(0.7, renderScale - 0.15);
+        resizeRenderer(renderScale);
+      }
+      frameTotal = 0; frameCount = 0;
+    }
+  }
 }
+renderer.setAnimationLoop(animate);
+document.addEventListener('visibilitychange', () => {
+  clock.getDelta();
+  renderer.setAnimationLoop(document.hidden ? null : animate);
+});
 
-animate();
-
-// ── LOADER REMOVAL ──
+// Show actual asset progress, then warm both scenes before the first entrance.
 const loaderEl = document.getElementById('loader');
-if (loaderEl) {
-  setTimeout(() => {
-    loaderEl.style.opacity = '0';
-    loaderEl.style.visibility = 'hidden';
-    setTimeout(() => {
-      loaderEl.remove();
-      startBgMusic();
-    }, 800);
-  }, 100);
-}
+const loaderStatusText = document.getElementById('loader-status-text');
+const loaderBarFill = document.getElementById('loader-bar-fill');
+const loaderPercent = document.getElementById('loader-percent');
+const loaderFileInfo = document.getElementById('loader-file-info');
+THREE.DefaultLoadingManager.onProgress = (_url, loaded, total) => {
+  const pct = Math.round(loaded / total * 90);
+  if (loaderBarFill) loaderBarFill.style.transform = `scaleX(${pct / 100})`;
+  if (loaderPercent) loaderPercent.textContent = `${pct}%`;
+  if (loaderStatusText) loaderStatusText.textContent = 'MAKING YOURSELF AT HOME...';
+  if (loaderFileInfo) loaderFileInfo.textContent = `${loaded} / ${total} ASSETS READY`;
+};
+THREE.DefaultLoadingManager.onError = () => {
+  if (loaderFileInfo) loaderFileInfo.textContent = 'A DETAIL COULD NOT LOAD. THE WORLD IS STILL OPEN.';
+};
+assetsReady.then(() => {
+  setExteriorActive(false);
+  setRoomActive(true);
+  setSceneAtmosphere(false);
+  camera.position.copy(CAM_STATES.ROOM.pos);
+  camera.lookAt(CAM_STATES.ROOM.target);
+  renderer.compile(scene, camera);
+  renderer.render(scene, camera);
+  setRoomActive(false);
+  setExteriorActive(true);
+  setSceneAtmosphere(true);
+  camera.position.copy(CAM_STATES.OUTSIDE.pos);
+  camTarget.copy(CAM_STATES.OUTSIDE.target);
+  camera.lookAt(camTarget);
+  renderer.compile(scene, camera);
+  renderer.render(scene, camera);
+  if (loaderBarFill) loaderBarFill.style.transform = 'scaleX(1)';
+  if (loaderPercent) loaderPercent.textContent = '100%';
+  if (loaderStatusText) loaderStatusText.textContent = 'WELCOME TO MY LITTLE WORLD.';
+  loaderEl?.classList.add('slide-up');
+  menuEl.classList.add('visible', 'pop-in');
+  menuEl.inert = false;
+  document.body.dataset.ready = 'true';
+  setTimeout(() => loaderEl?.remove(), reducedMotion.matches ? 200 : 500);
+  startBgMusic();
+});

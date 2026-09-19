@@ -3,62 +3,116 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cpath fill='%2351695b' d='M0 0h32v32H0z'/%3E%3Cpath fill='%23e9d9b8' d='M7 15h18v14H7z'/%3E%3Cpath fill='%23ba664c' d='M3 16L16 4l13 12z'/%3E%3Cpath fill='%2351695b' d='M13 21h6v8h-6z'/%3E%3C/svg%3E">
 <title>OLAN.DEV — 3D World</title>
 <meta name="description" content="Portfolio of Olan — CS student at BINUS University. Explore a 3D pixel-art world showcasing projects, skills, and contact info.">
-<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="style.css?v=14">
+<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323&family=Pixelify+Sans:wght@500;600;700&family=Fredoka:wght@500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css?v=20">
 </head>
 <body>
 
-<canvas id="c"></canvas>
+<canvas id="c" aria-label="Olan's interactive low poly world. Use the navigation buttons to explore."></canvas>
 <div id="scanlines"></div>
 <div id="vignette"></div>
 <div id="noise"></div>
+<div id="light-pop" aria-hidden="true"></div>
 <div id="cur"></div>
 <div id="obj-label"></div>
 
+
 <!-- LOADER -->
-<div id="loader">
-  <div class="loader-text">LOADING OLAN.DEV...</div>
+<div id="loader" role="status" aria-live="polite">
+  <div class="loader-scanlines"></div>
+  <div class="loader-vignette"></div>
+  <div class="loader-container">
+    <div class="loader-badge">
+      <span class="loader-badge-dot"></span>
+      <span>SYSTEM BOOT // V2.4</span>
+    </div>
+
+    <div class="loader-game-box">
+      <div class="corner tl">┌─</div>
+      <div class="corner tr">─┐</div>
+      <div class="corner bl">└─</div>
+      <div class="corner br">─┘</div>
+
+      <div class="loader-sprite-wrap">
+        <div class="pixel-spinner">
+          <div class="spin-block b1"></div>
+          <div class="spin-block b2"></div>
+          <div class="spin-block b3"></div>
+          <div class="spin-block b4"></div>
+        </div>
+      </div>
+
+      <div class="loader-status" id="loader-status">
+        <span class="status-prefix">&gt;</span> <span id="loader-status-text">INITIALIZING 3D ENGINE...</span><span class="cursor-blink">_</span>
+      </div>
+
+      <div class="loader-progress-wrap">
+        <div class="loader-bar-frame">
+          <div class="loader-bar-fill" id="loader-bar-fill"></div>
+        </div>
+        <div class="loader-pct-badge" id="loader-percent">0%</div>
+      </div>
+
+      <div class="loader-stats">
+        <span id="loader-file-info">ASSETS: PREPARING...</span>
+        <span class="loader-fps-tag">A LITTLE WORLD, LOADING</span>
+      </div>
+    </div>
+
+    <div class="loader-tip-box">
+      <span class="loader-tip-tag">HINT:</span>
+      <span class="loader-tip-text">Click glowing objects inside the room to discover projects &amp; skills!</span>
+    </div>
+  </div>
 </div>
 
 <!-- MAIN MENU -->
-<div id="menu">
+<div id="menu" inert>
   <div class="menu-title">OLAN.DEV</div>
-  <div class="menu-sub">// Portfolio v2.0 · CS @ BINUS</div>
+  <div class="menu-subtitle">welcome to my digital world!</div>
 
   <div class="menu-items">
     <div class="menu-corner tl">┌─</div>
     <div class="menu-corner br">─┘</div>
-    <div class="menu-item" data-action="enter">
+    <button type="button" class="menu-item primary" data-action="enter">
       <span class="arrow">▶</span>
       <span>ENTER WORLD</span>
-    </div>
-    <div class="menu-item" data-action="projects">
+    </button>
+
+    <button type="button" class="menu-item" data-action="projects">
       <span class="arrow">▶</span>
       <span>VIEW PROJECTS</span>
-    </div>
-    <div class="menu-item" data-action="about">
+    </button>
+    <button type="button" class="menu-item" data-action="about">
       <span class="arrow">▶</span>
       <span>ABOUT ME</span>
-    </div>
-    <div class="menu-item" data-action="contact">
+    </button>
+    <button type="button" class="menu-item" data-action="contact">
       <span class="arrow">▶</span>
       <span>CONTACT</span>
-    </div>
+    </button>
   </div>
-  <div class="press-key">▼ CLICK TO EXPLORE ▼</div>
 </div>
 
 <!-- HUD -->
-<div id="hud">
+<div id="hud" inert>
   <div id="loc-box" style="position:fixed">
     <div id="loc-name">OLAN'S ROOM</div>
     <div id="loc-sub">// click objects to interact</div>
   </div>
   <div id="hint-bar" style="position:fixed">
-    <div id="hint-text">[ CLICK ] interact with objects</div>
+    <div id="hint-text">Explore the room, or pick a destination</div>
   </div>
+  <nav id="room-nav" aria-label="Explore Olan's room" hidden>
+    <button type="button" data-view="laptop">Projects</button>
+    <button type="button" data-view="about">About</button>
+    <button type="button" data-view="plant">Skills</button>
+    <button type="button" data-view="shelf">Experience</button>
+    <button type="button" data-view="poster">Contact</button>
+  </nav>
   <button id="back-btn" style="position:fixed">◄ BACK</button>
   <button id="help-btn" style="position:fixed" title="Controls & Help">?</button>
 </div>
@@ -89,12 +143,19 @@
 <script type="importmap">
 {
   "imports": {
+    "./js/scene/sceneSetup.js": "./js/scene/sceneSetup.js?v=156",
+    "./js/scene/exteriorScene.js": "./js/scene/exteriorScene.js?v=156",
+    "./js/scene/materials.js": "./js/scene/materials.js?v=156",
+    "./js/scene/sceneUtils.js": "./js/scene/sceneUtils.js?v=156",
+    "./js/objects/roomObjects.js": "./js/objects/roomObjects.js?v=156",
+    "./js/audio/audioManager.js": "./js/audio/audioManager.js?v=156",
     "three": "https://unpkg.com/three@0.128.0/build/three.module.js",
     "three/addons/": "https://unpkg.com/three@0.128.0/examples/jsm/"
   }
 }
 </script>
 
-<script type="module" src="main.js?v=135"></script>
+<script type="module" src="main.js?v=156"></script>
+
 </body>
 </html>
