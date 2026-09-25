@@ -12,6 +12,8 @@ import {
   createExteriorScene, updateExterior, openFrontDoor, resetFrontDoor, setExteriorActive
 } from './js/scene/exteriorScene.js';
 import { batchStatic } from './js/scene/sceneUtils.js';
+import { createAbstraction } from './js/scene/abstraction.js?v=158';
+import { createAcKeypad } from './js/ui/acKeypad.js?v=157';
 import { characterGroup, loadCharacterModel, updateCharacterWaypoint, animationMixers, setCharacterMoving } from './js/objects/character.js';
 import { openProjectModal } from './js/ui/projectModal.js?v=156';
 import { openExperienceModal } from './js/ui/experienceModal.js?v=156';
@@ -35,7 +37,7 @@ export const roomContainer = new THREE.Group();
 roomContainer.name = 'RoomContainer';
 roomChildren.forEach(child => roomContainer.add(child));
 scene.add(roomContainer);
-batchStatic(roomContainer, [...room.clickables, ...room.interactiveSparkles]);
+batchStatic(roomContainer, [...room.clickables, ...room.movableProps, ...room.interactiveSparkles]);
 
 loadCharacterModel();
 roomContainer.add(characterGroup);
@@ -85,6 +87,26 @@ const helpBtn = document.getElementById('help-btn');
 const label = document.getElementById('obj-label');
 const cur = document.getElementById('cur');
 const roomNav = document.getElementById('room-nav');
+const acAccess = document.getElementById('ac-access');
+const acPosition = new THREE.Vector3();
+const abstraction = createAbstraction(room, roomContainer);
+const acKeypad = createAcKeypad(() => {
+  hoveredObj = null;
+  label.style.opacity = '0';
+  cur.classList.remove('hovering');
+  abstraction.start();
+  updateOutlineSelection();
+});
+
+function showAcService() {
+  if (currentState !== 'ROOM' || camAnimating || enteringWorld || abstraction.active || modal.classList.contains('open')) return;
+  acKeypad.open();
+  label.style.opacity = '0';
+  hoveredObj = null;
+  updateOutlineSelection();
+  needsFrame = true;
+}
+acAccess.addEventListener('click', showAcService);
 document.body.dataset.scene = 'OUTSIDE';
 menuEl.inert = true;
 hudEl.inert = true;
@@ -103,11 +125,11 @@ function getClickable(obj) {
 }
 
 function updateOutlineSelection() {
-  outlinePass.enabled = currentState === 'ROOM' && !camAnimating && !enteringWorld && !!hoveredObj;
+  outlinePass.enabled = currentState === 'ROOM' && !camAnimating && !enteringWorld && !acKeypad.isOpen && !abstraction.transitioning && !!hoveredObj;
   if (outlinePass.selectedObjects[0] !== (outlinePass.enabled ? hoveredObj : undefined)) {
     outlinePass.selectedObjects = outlinePass.enabled ? [hoveredObj] : [];
   }
-  room.interactiveSparkles.forEach(s => { s.visible = !visitedInteractives.has(s.userData.object); });
+  room.interactiveSparkles.forEach(s => { s.visible = !abstraction.active && !visitedInteractives.has(s.userData.object); });
 }
 
 // ── CAMERA ANIMATION ──
@@ -249,7 +271,7 @@ function enterWorldSequence(directAction = null) {
 }
 
 function showOutside() {
-  if (camAnimating || enteringWorld) return;
+  if (camAnimating || enteringWorld || abstraction.transitioning) return;
   enteringWorld = true;
   closeModal();
   hoveredObj = null;
@@ -280,6 +302,7 @@ function showOutside() {
     // 6. Update state & UI
     currentState = 'OUTSIDE';
     document.body.dataset.scene = 'OUTSIDE';
+    abstraction.outside();
     updateOutlineSelection();
     hudEl.style.opacity = '0';
     backBtn.style.display = 'none';
@@ -397,7 +420,7 @@ document.querySelectorAll('.menu-item').forEach(item => {
 });
 
 backBtn.addEventListener('click', () => {
-  if (enteringWorld) return;
+  if (enteringWorld || abstraction.transitioning) return;
   if (clickSound && clickSound.isPlaying) clickSound.stop();
   if (clickSound?.buffer) clickSound.play();
   if (['LAPTOP', 'ABOUT', 'PLANT', 'POSTER', 'SHELF'].includes(currentState)) {
@@ -412,6 +435,7 @@ backBtn.addEventListener('mouseleave', () => cur.classList.remove('hovering'));
 
 if (helpBtn) {
   helpBtn.addEventListener('click', () => {
+    if (abstraction.transitioning) return;
     if (clickSound && clickSound.isPlaying) clickSound.stop();
     if (clickSound?.buffer) clickSound.play();
     openHelpModal();
@@ -439,7 +463,7 @@ modal.addEventListener('click', e => {
 // World clicks
 renderer.domElement.addEventListener('click', e => {
   mouse.set(e.clientX / window.innerWidth * 2 - 1, -(e.clientY / window.innerHeight) * 2 + 1);
-  if (modal.classList.contains('open') || currentState !== 'ROOM' || camAnimating || enteringWorld || (performance.now() - lastEnterTime < 500)) return;
+  if (modal.classList.contains('open') || acKeypad.isOpen || abstraction.transitioning || currentState !== 'ROOM' || camAnimating || enteringWorld || (performance.now() - lastEnterTime < 500)) return;
   raycaster.setFromCamera(mouse, camera);
   const hits = raycaster.intersectObjects(room.clickables, true);
   if (hits.length > 0) {
@@ -448,7 +472,8 @@ renderer.domElement.addEventListener('click', e => {
       visitedInteractives.add(obj);
       updateOutlineSelection();
 
-      if (obj.userData.id === 'laptop') { showLaptopView(); }
+      if (obj.userData.id === 'ac') { showAcService(); }
+      else if (obj.userData.id === 'laptop') { showLaptopView(); }
       else if (obj.userData.id === 'plant') {
         showPlantView();
         setTimeout(() => {
@@ -486,13 +511,13 @@ renderer.domElement.addEventListener('click', e => {
 const roomActions = { laptop: showLaptopView, about: showAboutView, plant: showPlantView, shelf: showShelfView, poster: showPosterView };
 roomNav.addEventListener('click', e => {
   const button = e.target.closest('[data-view]');
-  if (!button || enteringWorld || camAnimating || currentState !== 'ROOM') return;
+  if (!button || enteringWorld || camAnimating || abstraction.transitioning || currentState !== 'ROOM') return;
   const object = room.clickables.find(obj => obj.userData.id === button.dataset.view);
   visitedInteractives.add(object);
   roomActions[button.dataset.view]();
 });
 document.addEventListener('keydown', e => {
-  if (e.key !== 'Escape' || enteringWorld) return;
+  if (e.key !== 'Escape' || enteringWorld || acKeypad.isOpen || abstraction.transitioning) return;
   if (modal.classList.contains('open') && currentState === 'ROOM') closeModal();
   else if (currentState !== 'OUTSIDE' && currentState !== 'ROOM') backFromView();
 });
@@ -520,11 +545,11 @@ function animate() {
   const rawDelta = clock.getDelta();
   const dt = Math.min(rawDelta, 0.05);
   const t = clock.elapsedTime;
-  if (modal.classList.contains('open') && !camAnimating && !needsFrame) return;
+  if ((modal.classList.contains('open') || acKeypad.isOpen) && !camAnimating && !needsFrame && !abstraction.active) return;
   needsFrame = false;
 
   updateExterior(dt, t);
-  if (roomContainer.visible && !reducedMotion.matches) {
+  if (roomContainer.visible && !reducedMotion.matches && !abstraction.active) {
     animationMixers.forEach(mixer => mixer.update(dt));
     updateCharacterWaypoint(dt, t, charAtDesk);
     room.particles.rotation.y = Math.sin(t * 0.08) * 0.06;
@@ -578,7 +603,7 @@ function animate() {
 
 
   // Hover detection in ROOM state
-  if (currentState === 'ROOM' && !camAnimating && !enteringWorld && hoverDevice.matches && t - lastHoverCheck > 1 / 30) {
+  if (currentState === 'ROOM' && !camAnimating && !enteringWorld && !acKeypad.isOpen && !modal.classList.contains('open') && !abstraction.transitioning && hoverDevice.matches && t - lastHoverCheck > 1 / 30) {
     lastHoverCheck = t;
     raycaster.setFromCamera(mouse, camera);
     const hits = raycaster.intersectObjects(room.clickables, true);
@@ -604,12 +629,21 @@ function animate() {
     }
   }
 
+  acAccess.hidden = currentState !== 'ROOM' || camAnimating || enteringWorld || abstraction.active || modal.classList.contains('open');
+  if (!acAccess.hidden) {
+    room.acGroup.getWorldPosition(acPosition).project(camera);
+    const x = (acPosition.x + 1) * innerWidth / 2;
+    acAccess.dataset.edge = String(x > innerWidth - 40 || x < 40);
+    acAccess.style.left = `${THREE.MathUtils.clamp(x, 40, innerWidth - 40)}px`;
+    acAccess.style.top = `${THREE.MathUtils.clamp((1 - acPosition.y) * innerHeight / 2, 115, innerHeight - 190)}px`;
+  }
+  abstraction.update(dt, currentState);
   updateOutlineSelection();
-  if (t - lastShadowUpdate > 0.1 && (!reducedMotion.matches || enteringWorld)) {
+  if (t - lastShadowUpdate > 0.1 && (!reducedMotion.matches || enteringWorld || abstraction.transitioning)) {
     renderer.shadowMap.needsUpdate = true;
     lastShadowUpdate = t;
   }
-  if (outlinePass.enabled) composer.render();
+  if (outlinePass.enabled || abstraction.active) composer.render();
   else renderer.render(scene, camera);
 
   if (!enteringWorld && rawDelta < 0.12) {

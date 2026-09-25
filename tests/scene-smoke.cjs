@@ -60,7 +60,7 @@ const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
           targets: group.children.filter(o => o.userData.clickable).length,
           width: document.documentElement.scrollWidth, viewport: innerWidth };
       });
-      assert.ok(roomState.visible && roomState.targets === 9, 'Interactive room objects lost during batching');
+      assert.ok(roomState.visible && roomState.targets === 10, 'Interactive room objects lost during batching');
       assert.ok(roomState.calls < 250, `Room draw calls: ${roomState.calls}`);
       assert.equal(roomState.width, roomState.viewport, 'Horizontal overflow');
 

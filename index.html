@@ -7,7 +7,7 @@
 <title>OLAN.DEV — 3D World</title>
 <meta name="description" content="Portfolio of Olan — CS student at BINUS University. Explore a 3D pixel-art world showcasing projects, skills, and contact info.">
 <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323&family=Pixelify+Sans:wght@500;600;700&family=Fredoka:wght@500;600&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="style.css?v=21">
+<link rel="stylesheet" href="style.css?v=23">
 </head>
 <body>
 
@@ -18,6 +18,49 @@
 <div id="light-pop" aria-hidden="true"></div>
 <div id="cur"></div>
 <div id="obj-label"></div>
+<button id="ac-access" type="button" aria-label="Open air conditioner service panel" hidden><span>AC</span></button>
+
+<dialog id="ac-keypad" tabindex="-1" aria-labelledby="ac-title" aria-describedby="ac-instruction">
+  <form method="dialog" class="ac-panel">
+    <div class="ac-heading">
+      <h2 id="ac-title">Climate control</h2>
+      <button class="ac-close" value="cancel" aria-label="Close service panel">
+        <svg viewBox="0 0 20 20" aria-hidden="true"><path d="m5 5 10 10M15 5 5 15"/></svg>
+      </button>
+    </div>
+    <div class="ac-vents" aria-hidden="true"></div>
+    <div class="ac-readout">
+      <span class="ac-readout-label">SERVICE ACCESS</span>
+      <output id="ac-digits" aria-label="0 of 6 digits entered">_ _ _ _ _ _</output>
+      <p id="ac-status" role="status">Enter 6-digit access code.</p>
+    </div>
+    <div class="ac-keys" aria-label="PIN keypad">
+      <button type="button" data-pin="7">7</button><button type="button" data-pin="8">8</button><button type="button" data-pin="9">9</button>
+      <button type="button" data-pin="4">4</button><button type="button" data-pin="5">5</button><button type="button" data-pin="6">6</button>
+      <button type="button" data-pin="1">1</button><button type="button" data-pin="2">2</button><button type="button" data-pin="3">3</button>
+      <button type="button" data-pin="clear" aria-label="Clear code">C</button><button type="button" data-pin="0">0</button>
+      <button type="button" data-pin="delete" aria-label="Delete last digit"><svg viewBox="0 0 24 20" aria-hidden="true"><path d="M8 3h13v14H8L2 10Z M11 7l6 6m0-6-6 6"/></svg></button>
+    </div>
+    <button type="button" id="ac-submit" disabled>ENTER CODE</button>
+    <p id="ac-instruction">Click the keys or use your keyboard.</p>
+  </form>
+</dialog>
+
+<div id="abstraction-overlay" aria-hidden="true">
+  <div id="abstraction-message"></div>
+  <div class="abstraction-caption">connection to reality lost</div>
+</div>
+<div id="abstraction-announcement" class="sr-only" role="status" aria-live="polite"></div>
+<p id="asset-credit" hidden>
+  <span>"(TADC)Abstracted Kaufmo PUBLIC TEXTURE FIX"</span>
+  <a href="https://skfb.ly/pLR7T" target="_blank" rel="noreferrer">by DemonWolf</a>
+  <span>is licensed under</span>
+  <a href="http://creativecommons.org/licenses/by-nc/4.0/" target="_blank" rel="noreferrer">Creative Commons Attribution-NonCommercial</a><span>.</span>
+</p>
+<div id="abstraction-controls" hidden>
+  <button id="abstraction-sound" type="button" aria-pressed="false">Mute sound</button>
+  <button id="abstraction-reset" type="button">Restore world</button>
+</div>
 
 
 <!-- LOADER -->
@@ -143,19 +186,19 @@
 <script type="importmap">
 {
   "imports": {
-    "./js/scene/sceneSetup.js": "./js/scene/sceneSetup.js?v=156",
-    "./js/scene/exteriorScene.js": "./js/scene/exteriorScene.js?v=156",
+    "./js/scene/sceneSetup.js": "./js/scene/sceneSetup.js?v=157",
+    "./js/scene/exteriorScene.js": "./js/scene/exteriorScene.js?v=157",
     "./js/scene/materials.js": "./js/scene/materials.js?v=156",
     "./js/scene/sceneUtils.js": "./js/scene/sceneUtils.js?v=156",
-    "./js/objects/roomObjects.js": "./js/objects/roomObjects.js?v=156",
-    "./js/audio/audioManager.js": "./js/audio/audioManager.js?v=156",
+    "./js/objects/roomObjects.js": "./js/objects/roomObjects.js?v=157",
+    "./js/audio/audioManager.js": "./js/audio/audioManager.js?v=157",
     "three": "https://unpkg.com/three@0.128.0/build/three.module.js",
     "three/addons/": "https://unpkg.com/three@0.128.0/examples/jsm/"
   }
 }
 </script>
 
-<script type="module" src="main.js?v=156"></script>
+<script type="module" src="main.js?v=158"></script>
 
 </body>
 </html>

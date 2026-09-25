@@ -1570,3 +1570,150 @@ button:focus-visible, a:focus-visible { outline: 2px solid #ffe6a3; outline-offs
   #loader.slide-up { opacity: 0; transform: none; }
   #cur { transition: none; }
 }
+
+/* The AC is a scene object; its HTML target also makes it keyboard accessible. */
+.sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; border: 0; }
+#ac-access {
+  position: fixed; z-index: 701; width: 76px; height: 48px;
+  transform: translate(-50%, -50%); background: transparent; color: transparent;
+  border: 1px solid transparent; font: 18px 'VT323', monospace; cursor: none;
+}
+#ac-access:focus-visible, #ac-access[data-edge="true"] {
+  background: #252c25; color: #ffe6a3; border-color: #82734e;
+}
+#ac-access[data-edge="true"] { width: 48px; }
+#ac-access[hidden], #abstraction-controls[hidden] { display: none; }
+
+/* A physical service keypad, in the room's existing warm pixel vocabulary. */
+#ac-keypad {
+  margin: auto; width: min(352px, calc(100vw - 32px)); max-height: calc(100dvh - 32px);
+  padding: 0; overflow-y: auto; overscroll-behavior: contain;
+  background: #c7c7b4; color: #202c27; border: 0; border-radius: 8px;
+  box-shadow: 0 24px 70px #070c0bb3, inset 0 2px 0 #f4f0d9;
+  font-family: 'VT323', monospace; cursor: auto;
+}
+#ac-keypad::backdrop { background: #0b1215a6; }
+body:has(#ac-keypad[open]) #cur, body:has(#ac-keypad[open]) #obj-label { visibility: hidden; }
+.ac-panel { padding: 24px; }
+.ac-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.ac-heading h2 { font: 27px 'VT323', monospace; }
+.ac-close {
+  display: grid; place-items: center; width: 44px; height: 44px; margin: -8px -8px -8px 0;
+  border: 0; background: transparent; color: #303b31; cursor: pointer;
+}
+.ac-close:hover { background: #b3b5a3; }
+.ac-close svg, .ac-keys svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 1.8; }
+.ac-vents { height: 13px; margin: 15px 0 22px; background: repeating-linear-gradient(0deg, #858c7d 0 1px, transparent 1px 4px); }
+.ac-readout { background: #243f36; color: #cbecb9; padding: 17px 16px 13px; border: 2px solid #636e5f; border-radius: 3px; }
+.ac-readout-label { font-size: 14px; letter-spacing: 1.2px; }
+#ac-digits { display: block; margin: 13px 0 10px; font-size: 35px; line-height: 1; font-variant-numeric: tabular-nums; white-space: nowrap; }
+#ac-status { min-height: 20px; font-size: 17px; }
+.rejected .ac-readout { background: #54232b; color: #ffd2ba; }
+.ac-keys { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-top: 22px; }
+.ac-keys button {
+  display: grid; place-items: center; min-height: 52px; border: 0; border-radius: 4px;
+  background: #eeead8; color: #283c32; font: 29px 'VT323', monospace;
+  box-shadow: 0 3px 2px #7b8374; cursor: pointer;
+}
+.ac-keys button:hover { background: #fffbdf; }
+.ac-keys button:active { transform: translateY(2px); box-shadow: 0 1px 1px #7b8374; }
+#ac-submit {
+  width: 100%; min-height: 46px; margin-top: 20px; border: 0; border-radius: 3px;
+  background: #324b3d; color: #f1e9cb; font: 19px 'VT323', monospace; cursor: pointer;
+}
+#ac-submit:hover:enabled { background: #24392c; }
+#ac-submit:disabled { background: #a3ab98; color: #364330; cursor: default; }
+#ac-keypad button:focus-visible { outline: 3px solid #815223; outline-offset: 3px; }
+#ac-instruction { margin-top: 15px; color: #3d4b3d; font-size: 16px; text-align: center; }
+#ac-keypad ::selection { background: #385541; color: #f7f0ce; }
+
+/* The corruption is persistent; the large messages only punctuate the shift. */
+#abstraction-overlay {
+  --ruin: 0; position: fixed; inset: 0; z-index: 805; pointer-events: none;
+  display: none; align-items: center; justify-content: center; flex-direction: column; gap: 24px;
+  background: radial-gradient(ellipse at center, transparent 38%, rgb(36 0 12 / calc(var(--ruin) * .35)) 100%);
+}
+.abstracted #abstraction-overlay { display: flex; }
+#abstraction-message {
+  position: relative; max-width: calc(100vw - 40px); padding: 18px 24px;
+  color: #f3c7c2; background: #12080ddd; text-align: center; text-wrap: balance;
+  font: clamp(16px, 2.1vw, 30px)/1.7 'Press Start 2P', monospace;
+  letter-spacing: .06em; opacity: 0; transform: translateY(8px);
+  transition: opacity .4s, transform .4s;
+}
+.show-message #abstraction-message { opacity: 1; transform: translateY(0); }
+.abstraction-caption { font: 18px 'VT323', monospace; color: #c88787; opacity: 0; transition: opacity .8s; }
+.show-message .abstraction-caption { opacity: 1; }
+#abstraction-controls {
+  position: fixed; right: 20px; bottom: 24px; z-index: 810; display: flex; gap: 8px;
+}
+#abstraction-controls button {
+  min-height: 44px; padding: 9px 13px; border: 1px solid #70404d; border-radius: 2px;
+  background: #210f18; color: #e8c2b8; font: 17px 'VT323', monospace; cursor: pointer;
+}
+#abstraction-controls button:hover { background: #4b202f; color: #fff1e1; }
+#abstraction-controls button:focus-visible { outline-color: #eac4bb; }
+#asset-credit {
+  position: fixed; left: 18px; bottom: 18px; z-index: 811; max-width: min(430px, calc(100vw - 36px));
+  margin: 0; color: #d8aca7; font: 12px/1.35 'VT323', monospace; opacity: .72;
+  text-shadow: 1px 1px 0 #16070d; pointer-events: auto;
+}
+#asset-credit a { color: #efc5b7; text-underline-offset: 3px; }
+#asset-credit a:hover, #asset-credit a:focus-visible { color: #fff0da; }
+#asset-credit[hidden] { display: none; }
+.abstracted #light-pop { background: #090409; }
+.abstracted #loc-box, .abstracted #hint-bar, .abstracted #room-nav, .abstracted #back-btn, .abstracted #help-btn {
+  background: #1e101bea; border-color: #593040; color: #dda69f;
+}
+.abstracted #loc-name, .abstracted #hint-text { color: #e9b0a9; }
+.abstracted #loc-sub { color: #c88e91; }
+.abstracted #room-nav button { color: #e2b2ad; }
+.abstracted #room-nav button:hover, .abstracted #room-nav button:focus-visible { background: #4b2435; color: #ffddd0; }
+.abstracted #obj-label { border-color: #9e4755; background: #200b18; color: #ffc4b1; }
+.abstracted #menu::after { background: linear-gradient(90deg, #140611b8, #14061130 48%, transparent 75%); }
+.abstracted .menu-title {
+  max-width: 760px; font-size: clamp(25px, 3.8vw, 52px); line-height: 1.5;
+  letter-spacing: -.02em; color: #f0b9b0; text-shadow: 3px 1px 0 #6d1843, -2px 0 0 #39676c;
+  animation: none; text-wrap: balance;
+}
+.abstracted .menu-subtitle { color: #daa19e; text-shadow: 1px 2px 4px #17030c; animation: none; }
+.abstracted .menu-items { background: #1e0c18eb; border-color: #623147; box-shadow: 5px 10px 40px #0d0308a6; }
+.abstracted .menu-items::before { border-color: #87455b50; }
+.abstracted .menu-item { color: #cda5a2; }
+.abstracted .menu-item.primary { color: #f0c5ba; background: #743a4526; border-color: #ad677780; box-shadow: none; }
+.abstracted .menu-item:hover { background: #7a344333; border-color: #bf7a86; color: #ffe1d5; text-shadow: none; }
+.abstracted .menu-item .arrow { color: #e8a1ab; animation: none; }
+.glitch-burst #loc-name, .glitch-burst #hint-text, .glitch-burst .menu-title,
+.glitch-burst #abstraction-message { text-shadow: 4px 0 #da1762, -4px 1px #48c8c2; }
+.glitch-burst #abstraction-message::after {
+  content: attr(data-text); position: absolute; inset: 0; padding: inherit;
+  color: #e48bba; transform: translateX(-5px); clip-path: inset(37% 0 42% 0);
+}
+@media (max-width: 1050px) {
+  #abstraction-controls { bottom: 140px; right: 14px; gap: 6px; }
+  #abstraction-controls button { font-size: 16px; padding: 8px 10px; }
+  #asset-credit { left: 14px; top: 92px; bottom: auto; max-width: 245px; font-size: 11px; }
+}
+@media (max-width: 700px) and (orientation: portrait) {
+  .abstracted .menu-title { max-width: 350px; font-size: clamp(23px, 7vw, 33px); }
+  .abstracted .menu-subtitle { font-size: 18px; letter-spacing: 0; }
+  .abstracted #menu::after { background: linear-gradient(0deg, #150712ed, #15071260 55%, transparent 80%); }
+  .abstracted #loc-name { max-width: 160px; font-size: 9px; line-height: 1.5; }
+  .abstracted #loc-sub { max-width: 150px; font-size: 15px; }
+  .abstracted[data-scene="OUTSIDE"] #abstraction-controls { top: 16px; bottom: auto; }
+  #abstraction-message { padding: 16px; font-size: 16px; }
+}
+@media (max-height: 620px) {
+  .ac-panel { padding: 16px 22px; }
+  .ac-vents { margin: 9px 0; height: 9px; }
+  .ac-readout { padding: 10px 14px; }
+  #ac-digits { margin: 8px 0; font-size: 28px; }
+  .ac-keys { margin-top: 12px; gap: 7px; }
+  .ac-keys button { min-height: 44px; }
+  #ac-submit { margin-top: 12px; }
+  #ac-instruction { margin-top: 9px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  #abstraction-message { transform: none; transition: opacity .3s; }
+  .abstracted .menu-title, .glitch-burst #abstraction-message { text-shadow: none; }
+}

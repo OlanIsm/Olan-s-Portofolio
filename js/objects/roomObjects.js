@@ -88,6 +88,9 @@ export function createRoomObjects() {
   const acGroup = new THREE.Group(); acGroup.position.set(7.8, 6.5, -1); scene.add(acGroup);
   const acBody = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.8, 2.4), new THREE.MeshLambertMaterial({ color: 0xffffff })); acGroup.add(acBody);
   const acVent = new THREE.Mesh(new THREE.BoxGeometry(0.52, 0.1, 2.2), new THREE.MeshLambertMaterial({ color: 0x222222 })); acVent.position.set(-0.02, -0.25, 0); acGroup.add(acVent);
+  acGroup.name = 'AirConditioner';
+  acGroup.userData = { clickable: true, id: 'ac', label: 'AC // SERVICE PANEL' };
+  box(0.012, 0.045, 0.08, new THREE.MeshBasicMaterial({ color: 0x94eab5 }), -0.258, 0.04, 0.88, false, acGroup);
 
   const curtainMat = new THREE.MeshLambertMaterial({ color: 0xd6ba87 });
   box(4.3, 0.07, 0.07, M.shelf, 0, 2.02, 0.28, false, windowGroup);
@@ -379,12 +382,17 @@ export function createRoomObjects() {
   scene.add(particles);
 
   addStudioDetails(deskGroup, shelfGroup, windowGroup);
-  const clickables = [laptopGroup, tvGroup, shelfGroup, posterGroup, plantG, floorLampL, floorLampR, ceilingBulbG, catGroup];
+  const clickables = [laptopGroup, tvGroup, shelfGroup, posterGroup, plantG, floorLampL, floorLampR, ceilingBulbG, catGroup, acGroup];
   clickables.forEach(obj => batchStatic(obj, [plantCrown]));
+  const movableProps = [chairG, deskGroup, musicKeyboardG, opPoster, plant2];
+  movableProps.forEach(obj => batchStatic(obj));
 
   scene.updateMatrixWorld(true);
 
   return {
+    acGroup,
+    movableProps,
+    screens: [lapScreen, tvScreen],
     laptopGroup,
     shelfGroup,
     posterGroup,

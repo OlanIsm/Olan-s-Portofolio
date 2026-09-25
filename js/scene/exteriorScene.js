@@ -86,6 +86,8 @@ export let birdFlock = [];
 export let cloudList = [];
 export let treeCanopies = [];
 export let outdoorLights = [];
+export const breakableRoofs = [];
+export let skyDome, sunSprite;
 let doorwayGlow, chimneySmoke, gardenMotes, windChime;
 
 export function setFrontFacadeVisible(visible) {
@@ -181,6 +183,7 @@ function makePitchedRoof(w, h, d, roofMat, ridgeMat, x, y, z, parent = exteriorG
   roofGroup.add(backGable);
 
   parent.add(roofGroup);
+  if (roofMat === M_EXT.roofTiles) breakableRoofs.push(roofGroup);
   return roofGroup;
 }
 
@@ -847,9 +850,10 @@ export function createExteriorScene(scene) {
   outdoorLights.push({ light: skyHemiLight, baseIntensity: 0.7 });
 
   addGardenDetails();
-  const moving = [frontFacadeGroup, ...treeCanopies.map(t => t.group), ...birdFlock.map(b => b.group), ...cloudList.map(c => c.group), windChime];
+  const moving = [frontFacadeGroup, ...breakableRoofs, ...treeCanopies.map(t => t.group), ...birdFlock.map(b => b.group), ...cloudList.map(c => c.group), windChime];
   batchStatic(exteriorGroup, moving);
-  batchStatic(frontFacadeGroup, [frontDoorGroup, windChime]);
+  batchStatic(frontFacadeGroup, [frontDoorGroup, windChime, ...breakableRoofs]);
+  breakableRoofs.forEach(roof => batchStatic(roof, roof.children.slice(0, 2)));
   batchStatic(frontDoorGroup);
   cloudList.forEach(c => batchStatic(c.group));
 
@@ -871,6 +875,7 @@ function addGardenDetails() {
   }
   skyGeo.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3));
   const sky = new THREE.Mesh(skyGeo, new THREE.MeshBasicMaterial({ vertexColors: true, side: THREE.BackSide, fog: false, depthWrite: false }));
+  skyDome = sky;
   sky.renderOrder = -10; exteriorGroup.add(sky);
 
   const glowTexture = canvasTexture((ctx, w, h) => {
@@ -879,6 +884,7 @@ function addGardenDetails() {
     ctx.fillStyle = gradient; ctx.fillRect(0, 0, w, h);
   }, 128, 128);
   const sun = new THREE.Sprite(new THREE.SpriteMaterial({ map: glowTexture, fog: false, depthWrite: false, toneMapped: false, opacity: 0.65 }));
+  sunSprite = sun;
   sun.position.set(-62, 38, -85); sun.scale.set(35, 35, 1); exteriorGroup.add(sun);
   doorwayGlow = new THREE.Sprite(new THREE.SpriteMaterial({ map: glowTexture, fog: false, depthWrite: false, toneMapped: false, opacity: 0 }));
   doorwayGlow.position.set(0, 2.2, 7.6); doorwayGlow.scale.set(4.5, 6.0, 1); frontFacadeGroup.add(doorwayGlow);
