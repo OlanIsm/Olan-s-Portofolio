@@ -1,7 +1,7 @@
 export const projectsData = [
   {
     name: "ADELLIA FLORIST",
-    tag: "FIGMA / VANILLA JS",
+    tag: "COMPLETED",
     tagStyle: "border-color:#ff99bb;color:#ff99bb;background:rgba(255,153,187,0.1)",
     desc: "A boutique landing page for a local bouquet business built with Vanilla JS. Crafted with a Figma design system and Framer animations to sharpen UI/UX design & frontend execution skills.",
     tech: ["VANILLA JS", "FIGMA", "FRAMER", "HTML/CSS"],
@@ -19,7 +19,7 @@ export const projectsData = [
   },
   {
     name: "VOLUMEMATE",
-    tag: "HACKATHON FINALIST",
+    tag: "COMPLETED",
     tagStyle: "border-color:#ff88aa;color:#ff88aa;background:rgba(255,136,170,0.1)",
     desc: "Cooperative application featuring collective buying and AI-driven demand forecasting with optimal buying recommendations to empower cooperatives. TechnoScape Hackathon 2026 Finalist.",
     tech: ["REACT", "NEXT.JS", "AI FORECASTING"],
@@ -28,7 +28,7 @@ export const projectsData = [
   },
   {
     name: "DOMPETRACK",
-    tag: "PERSONAL FINANCE / AI",
+    tag: "COMPLETED",
     tagStyle: "border-color:#88ffcc;color:#88ffcc;background:rgba(136,255,204,0.1)",
     desc: "A personal finance and expense tracker web application featuring rapid manual entry, visual daily transaction trends, and intelligent spending analysis with personalized AI-driven recommendations powered by Gemini API.",
     tech: ["REACT", "NEST.TS", "POSTGRE", "GEMINI API"],
@@ -37,7 +37,7 @@ export const projectsData = [
   },
   {
     name: "OLAN.DEV (PORTFOLIO)",
-    tag: "IN PROGRESS",
+    tag: "COMPLETED",
     tagStyle: "border-color:#88ccff;color:#88ccff;background:rgba(136,204,255,0.1)",
     desc: "Interactive 3D portfolio website featuring a pixel-art style bedroom visualization, showcasing my projects, interactive skill tree, and social contact details.",
     tech: ["THREE.JS", "HTML", "CSS", "JAVASCRIPT"],
@@ -46,7 +46,7 @@ export const projectsData = [
   },
   {
     name: "EMITRACK",
-    tag: "MVP / ML",
+    tag: "COMPLETED",
     tagStyle: "border-color:#88ffcc;color:#88ffcc;background:rgba(136,255,204,0.1)",
     desc: "Machine Learning MVP application designed to predict vehicle carbon emissions based on car model and specifications.",
     tech: ["PYTHON", "MACHINE LEARNING", "MVP"],
@@ -55,7 +55,7 @@ export const projectsData = [
   },
   {
     name: "GENSHIN IMPORT",
-    tag: "MOBILE / CRUD",
+    tag: "COMPLETED",
     tagStyle: "border-color:#aa88ff;color:#aa88ff;background:rgba(170,136,255,0.1)",
     desc: "My first mobile CRUD application themed around Genshin Impact, allowing users to simulate buying and selling Genshin weapons and artifacts.",
     tech: ["MOBILE", "CRUD", "JAVA/KOTLIN"],
