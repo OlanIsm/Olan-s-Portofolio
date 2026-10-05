@@ -17,3 +17,7 @@ Unvisited clickable room objects glow; visited objects still highlight on hover.
 
 ## Scene additions
 Low-poly cream and sage arcade on the left, wall-mounted flower shelves, and a lit ivory figurine cabinet on the right. Shared materials and existing geometry batching contain draw calls. Decorative flowers do not enter the interactive target list.
+
+Both floor lamps stand forward of the arcade and figurine cabinet, offset from their contents. The cabinet's back meets the right wall and its front faces left into the room. The arcade retains its original angle.
+
+Space Patrol uses a cream/sage console, a dark teal star field, crisp pixel ships, and an overlapping ship emblem. Mobile stacks instructions below the game. Pause and exit remain ordinary keyboard-accessible buttons; reduced motion keeps the star field still.

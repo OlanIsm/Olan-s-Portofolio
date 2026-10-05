@@ -5,7 +5,7 @@ export const modalTitle = document.getElementById('modal-title');
 export const modalBody = document.getElementById('modal-body');
 export const modalBox = modal.querySelector('#modal-box');
 
-const ALL_BOX_CLASSES = ['st-modal-wide', 'about-modal-wide', 'contact-modal-compact', 'contact-modal-wide', 'proj-modal-wide'];
+const ALL_BOX_CLASSES = ['st-modal-wide', 'about-modal-wide', 'contact-modal-compact', 'contact-modal-wide', 'proj-modal-wide', 'arcade-modal'];
 let returnFocus = null;
 
 function resetModalWidthClasses() {
@@ -26,6 +26,7 @@ export function openModal(titleHTML, bodyHTML, boxClass = null, icon = 'book') {
   modalBody.innerHTML = bodyHTML;
   modal.inert = false;
   modal.classList.add('open');
+  modalBody.scrollTop = 0;
   document.getElementById('menu').inert = true;
   document.getElementById('hud').inert = true;
   document.getElementById('modal-close').focus({ preventScroll: true });

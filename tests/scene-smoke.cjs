@@ -89,6 +89,10 @@ const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
             return { x: (p.x + 1) * innerWidth / 2, y: (1 - p.y) * innerHeight / 2 };
           }, name);
           await page.mouse.click(point.x, point.y);
+          if (name === 'CozyArcade') {
+            await page.waitForSelector('.arcade-layout');
+            await page.locator('#modal-close').click();
+          }
           await page.mouse.move(1, 1);
           await page.waitForFunction(async name => {
             const { scene, outlinePass } = await import('/js/scene/sceneSetup.js');

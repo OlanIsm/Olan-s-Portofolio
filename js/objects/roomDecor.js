@@ -83,7 +83,7 @@ export function addRoomDecor(box) {
   // A trailing vine breaks the straight shelf edge.
   for (let i = 0; i < 7; i++) sphere(flowers, i % 2 ? leaf : lightLeaf, 0.12, -1.12 + Math.sin(i) * 0.08, 4.42 - i * 0.15, 0.59);
 
-  const cabinet = makeGroup('FigurineCabinet', 6.92, 3.55, -0.32);
+  const cabinet = makeGroup('FigurineCabinet', 7.4, 3.55, -Math.PI / 2);
   cube(cabinet, sage, 1.95, 0.24, 0.88, 0, 0.35, 0);
   cube(cabinet, cream, 1.95, 3.8, 0.12, 0, 2.35, -0.43);
   for (const x of [-0.91, 0.91]) cube(cabinet, cream, 0.13, 4.05, 0.92, x, 2.27, 0);

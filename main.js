@@ -21,7 +21,8 @@ import { openExperienceModal } from './js/ui/experienceModal.js?v=160';
 import { openContactModal } from './js/ui/contactModal.js?v=160';
 import { openSkillTreeModal } from './js/ui/skillTreeModal.js?v=160';
 import { openAboutModal } from './js/ui/aboutModal.js?v=160';
-import { openHelpModal } from './js/ui/helpModal.js?v=160';
+import { openHelpModal } from './js/ui/helpModal.js?v=161';
+import { openArcadeModal } from './js/ui/arcadeModal.js';
 import { modal, closeModal } from './js/ui/modalManager.js?v=160';
 
 const assetsReady = new Promise(resolve => { THREE.DefaultLoadingManager.onLoad = resolve; });
@@ -461,12 +462,20 @@ backBtn.addEventListener('click', () => {
 backBtn.addEventListener('mouseenter', () => cur.classList.add('hovering'));
 backBtn.addEventListener('mouseleave', () => cur.classList.remove('hovering'));
 
+function showArcade() {
+  const arcade = room.clickables.find(object => object.userData.id === 'arcade');
+  markVisited(arcade);
+  arcade.userData.on = true;
+  arcade.userData.accent.emissiveIntensity = .8;
+  openArcadeModal();
+}
+
 if (helpBtn) {
   helpBtn.addEventListener('click', () => {
     if (abstraction.transitioning) return;
     if (clickSound && clickSound.isPlaying) clickSound.stop();
     if (clickSound?.buffer) clickSound.play();
-    openHelpModal();
+    openHelpModal(showArcade);
   });
   helpBtn.addEventListener('mouseenter', () => cur.classList.add('hovering'));
   helpBtn.addEventListener('mouseleave', () => cur.classList.remove('hovering'));
@@ -500,9 +509,9 @@ renderer.domElement.addEventListener('click', e => {
       markVisited(obj);
       updateOutlineSelection();
 
-      if (obj.userData.id === 'arcade' || obj.userData.id === 'cabinet') {
-        const isArcade = obj.userData.id === 'arcade';
-        hud_hint.querySelector('#hint-text').textContent = isArcade ? 'PLAYER ONE READY / A little break between builds.' : 'Small figures. Big adventures. A shelf of favorite worlds.';
+      if (obj.userData.id === 'arcade') { showArcade(); }
+      else if (obj.userData.id === 'cabinet') {
+        hud_hint.querySelector('#hint-text').textContent = 'Small figures. Big adventures. A shelf of favorite worlds.';
         obj.userData.on = !obj.userData.on;
         obj.userData.accent.emissiveIntensity = obj.userData.on ? 0.8 : 0.18;
         if (clickSound?.buffer && !clickSound.isPlaying) clickSound.play();

@@ -160,21 +160,25 @@ export function createRoomObjects() {
   const ceilingLight = new THREE.PointLight(0xffffff, 0, 18); ceilingLight.position.set(0, 5.8, 0); scene.add(ceilingLight);
   ceilingBulbG.userData = { clickable: true, id: 'lamp', on: false, toggleLight: ceilingLight, mat: cBulb.material, emissiveOn: 0.9, baseLightInt: 1.4 };
 
-  // ── FLOOR LAMP LEFT ──
-  const floorLampL = new THREE.Group(); floorLampL.position.set(-7, 0, 1); scene.add(floorLampL);
-  const flBase = new THREE.Mesh(new THREE.CylinderGeometry(0.3, 0.35, 0.1, 8), new THREE.MeshLambertMaterial({ color: 0x2a2a2a })); flBase.position.y = 0.05; floorLampL.add(flBase);
-  const flPole = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.04, 4.5, 6), new THREE.MeshLambertMaterial({ color: 0x888888 })); flPole.position.y = 2.3; floorLampL.add(flPole);
-  const flShade = new THREE.Mesh(new THREE.CylinderGeometry(0.35, 0.5, 0.6, 8), new THREE.MeshLambertMaterial({ color: 0xf5e8d0, emissive: 0xffcc88, emissiveIntensity: 0.4 })); flShade.position.y = 4.6; floorLampL.add(flShade);
-  const flLightL = new THREE.PointLight(0xffcc88, 1.2, 11); flLightL.position.set(-7, 4.8, 1); scene.add(flLightL);
-  floorLampL.userData = { clickable: true, id: 'lamp', on: true, toggleLight: flLightL, mat: flShade.material, emissiveOn: 0.4, baseLightInt: 1.2 };
-
-  // ── FLOOR LAMP RIGHT ──
-  const floorLampR = new THREE.Group(); floorLampR.position.set(7, 0, 2); scene.add(floorLampR);
-  const frBase = new THREE.Mesh(new THREE.CylinderGeometry(0.3, 0.35, 0.1, 8), new THREE.MeshLambertMaterial({ color: 0x2a2a2a })); frBase.position.y = 0.05; floorLampR.add(frBase);
-  const frPole = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.04, 4.5, 6), new THREE.MeshLambertMaterial({ color: 0x888888 })); frPole.position.y = 2.3; floorLampR.add(frPole);
-  const frShade = new THREE.Mesh(new THREE.CylinderGeometry(0.35, 0.5, 0.6, 8), new THREE.MeshLambertMaterial({ color: 0xf5e8d0, emissive: 0xffcc88, emissiveIntensity: 0.4 })); frShade.position.y = 4.6; floorLampR.add(frShade);
-  const flLightR = new THREE.PointLight(0xffcc88, 1.2, 11); flLightR.position.set(7, 4.8, 2); scene.add(flLightR);
-  floorLampR.userData = { clickable: true, id: 'lamp', on: true, toggleLight: flLightR, mat: frShade.material, emissiveOn: 0.4, baseLightInt: 1.2 };
+  // Forward of the display pieces, with the poles outside their viewing areas.
+  function floorLamp(name, x, z) {
+    const group = new THREE.Group();
+    group.name = name;
+    group.position.set(x, 0, z);
+    scene.add(group);
+    const base = new THREE.Mesh(new THREE.CylinderGeometry(0.3, 0.35, 0.1, 8), M.chair);
+    base.position.y = 0.05; group.add(base);
+    const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.04, 4.5, 6), M.shelf);
+    pole.position.y = 2.3; group.add(pole);
+    const shade = new THREE.Mesh(new THREE.CylinderGeometry(0.35, 0.5, 0.6, 8), new THREE.MeshLambertMaterial({ color: 0xf5e8d0, emissive: 0xffcc88, emissiveIntensity: 0.4 }));
+    shade.position.y = 4.6; group.add(shade);
+    const light = new THREE.PointLight(0xffcc88, 1.2, 11);
+    light.position.y = 4.8; group.add(light);
+    group.userData = { clickable: true, id: 'lamp', on: true, toggleLight: light, mat: shade.material, emissiveOn: 0.4, baseLightInt: 1.2 };
+    return group;
+  }
+  const floorLampL = floorLamp('FloorLampLeft', -7, 4.5);
+  const floorLampR = floorLamp('FloorLampRight', 5.65, 4.8);
 
   // ── MUSIC KEYBOARD ──
   const musicKeyboardG = new THREE.Group(); musicKeyboardG.position.set(-7.35, 0, -2.0); musicKeyboardG.rotation.y = Math.PI / 2; musicKeyboardG.scale.setScalar(1.2); scene.add(musicKeyboardG);
@@ -408,8 +412,8 @@ export function createRoomObjects() {
     tvLight,
     lampLight,
     ceilingLight,
-    flLightL,
-    flLightR,
+    flLightL: floorLampL.userData.toggleLight,
+    flLightR: floorLampR.userData.toggleLight,
     interactiveSparkles,
     particles,
     clickables
