@@ -153,8 +153,8 @@ export function createAbstraction(room, roomContainer) {
     new THREE.Vector3(-8, 0, 20)
   ];
   const assetCredit = document.getElementById('asset-credit');
-  const hudText = [document.getElementById('loc-name'), document.getElementById('loc-sub'), document.getElementById('hint-text')];
-  const corruptedText = ['ROOM // NOT FOUND', '// something is looking back', 'The door is still there.'];
+  const hudText = [document.getElementById('hint-text')];
+  const corruptedText = ['The door is still there.'];
 
   document.addEventListener('pointermove', event => {
     gaze.value.set(event.clientX / innerWidth * 2 - 1, 1 - event.clientY / innerHeight * 2);

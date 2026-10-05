@@ -1,3 +1,4 @@
+import { pixelIcon } from './js/ui/pixelIcons.js';
 import * as THREE from 'three';
 import {
   renderer, scene, camera, CAM_STATES, camTarget, composer, outlinePass,
@@ -12,16 +13,16 @@ import {
   createExteriorScene, updateExterior, openFrontDoor, resetFrontDoor, setExteriorActive
 } from './js/scene/exteriorScene.js';
 import { batchStatic } from './js/scene/sceneUtils.js';
-import { createAbstraction } from './js/scene/abstraction.js?v=158';
+import { createAbstraction } from './js/scene/abstraction.js?v=160';
 import { createAcKeypad } from './js/ui/acKeypad.js?v=157';
 import { characterGroup, loadCharacterModel, updateCharacterWaypoint, animationMixers, setCharacterMoving } from './js/objects/character.js';
-import { openProjectModal } from './js/ui/projectModal.js?v=156';
-import { openExperienceModal } from './js/ui/experienceModal.js?v=156';
-import { openContactModal } from './js/ui/contactModal.js?v=135';
-import { openSkillTreeModal } from './js/ui/skillTreeModal.js?v=130';
-import { openAboutModal } from './js/ui/aboutModal.js?v=130';
-import { openHelpModal } from './js/ui/helpModal.js?v=130';
-import { modal, closeModal } from './js/ui/modalManager.js?v=135';
+import { openProjectModal } from './js/ui/projectModal.js?v=160';
+import { openExperienceModal } from './js/ui/experienceModal.js?v=160';
+import { openContactModal } from './js/ui/contactModal.js?v=160';
+import { openSkillTreeModal } from './js/ui/skillTreeModal.js?v=160';
+import { openAboutModal } from './js/ui/aboutModal.js?v=160';
+import { openHelpModal } from './js/ui/helpModal.js?v=160';
+import { modal, closeModal } from './js/ui/modalManager.js?v=160';
 
 const assetsReady = new Promise(resolve => { THREE.DefaultLoadingManager.onLoad = resolve; });
 
@@ -80,7 +81,6 @@ let lastEnterTime = 0;
 // ── UI ELEMENTS ──
 const menuEl = document.getElementById('menu');
 const hudEl = document.getElementById('hud');
-const hud_loc = document.getElementById('loc-box');
 const hud_hint = document.getElementById('hint-bar');
 const backBtn = document.getElementById('back-btn');
 const helpBtn = document.getElementById('help-btn');
@@ -101,6 +101,7 @@ const acKeypad = createAcKeypad(() => {
 function showAcService() {
   if (currentState !== 'ROOM' || camAnimating || enteringWorld || abstraction.active || modal.classList.contains('open')) return;
   acKeypad.open();
+  markVisited(room.acGroup);
   label.style.opacity = '0';
   hoveredObj = null;
   updateOutlineSelection();
@@ -125,12 +126,35 @@ function getClickable(obj) {
 }
 
 function updateOutlineSelection() {
-  outlinePass.enabled = currentState === 'ROOM' && !camAnimating && !enteringWorld && !acKeypad.isOpen && !abstraction.transitioning && !!hoveredObj;
-  if (outlinePass.selectedObjects[0] !== (outlinePass.enabled ? hoveredObj : undefined)) {
-    outlinePass.selectedObjects = outlinePass.enabled ? [hoveredObj] : [];
-  }
-  room.interactiveSparkles.forEach(s => { s.visible = !abstraction.active && !visitedInteractives.has(s.userData.object); });
+  const available = currentState === 'ROOM' && !camAnimating && !enteringWorld && !acKeypad.isOpen && !modal.classList.contains('open') && !abstraction.active;
+  const selected = available ? room.clickables.filter(obj => !visitedInteractives.has(obj) || obj === hoveredObj) : [];
+  outlinePass.enabled = selected.length > 0;
+  if (selected.length !== outlinePass.selectedObjects.length || selected.some((obj, i) => obj !== outlinePass.selectedObjects[i])) outlinePass.selectedObjects = selected;
+  room.interactiveSparkles.forEach(s => { s.visible = available && !visitedInteractives.has(s.userData.object); });
 }
+
+function markVisited(object) {
+  if (!object) return;
+  visitedInteractives.add(object);
+  const button = roomNav.querySelector(`[data-view="${object.userData.id}"]`);
+  if (button && !button.classList.contains('visited')) {
+    button.classList.add('visited');
+    button.insertAdjacentHTML('beforeend', pixelIcon('check', 'nav-check'));
+    button.setAttribute('aria-label', `${button.textContent.trim()}, explored`);
+  }
+  updateOutlineSelection();
+}
+
+const destinationIcons = { laptop: 'laptop', about: 'portrait', plant: 'tree', shelf: 'trophy', poster: 'envelope' };
+roomNav.querySelectorAll('button').forEach(button => {
+  button.innerHTML = pixelIcon(destinationIcons[button.dataset.view]) + `<span>${button.textContent}</span>`;
+});
+helpBtn.innerHTML = pixelIcon('book');
+document.querySelectorAll('.menu-item').forEach(button => {
+  const icon = { enter: 'door', projects: 'laptop', about: 'portrait', contact: 'envelope' }[button.dataset.action];
+  button.querySelector('.arrow').innerHTML = pixelIcon(icon);
+});
+document.addEventListener('modalchange', () => { hoveredObj = null; label.style.opacity = '0'; needsFrame = true; updateOutlineSelection(); });
 
 // ── CAMERA ANIMATION ──
 let camAnimating = false;
@@ -202,10 +226,9 @@ function showWorld() {
   menuEl.inert = true;
   hudEl.inert = false;
   hudEl.style.opacity = '1';
-  hud_loc.style.display = 'block';
   hud_hint.style.display = 'block';
   backBtn.style.display = 'block';
-  backBtn.textContent = '◄ OUTSIDE';
+  backBtn.innerHTML = pixelIcon('door') + '<span>Outside</span>';
   if (helpBtn) helpBtn.style.display = 'flex';
   roomNav.hidden = false;
 }
@@ -322,9 +345,10 @@ function showOutside() {
 
 
 function showLaptopView() {
+  markVisited(room.clickables.find(object => object.userData.id === 'laptop'));
   currentState = 'LAPTOP';
   charAtDesk = false;
-  backBtn.textContent = '◄ BACK';
+  backBtn.innerHTML = pixelIcon('door') + '<span>Back</span>';
   flyTo(CAM_STATES.LAPTOP.pos, CAM_STATES.LAPTOP.target, 0.9, () => {
     if (kbSound && kbSound.isPlaying) kbSound.stop();
     if (kbSound?.buffer) kbSound.play();
@@ -336,36 +360,40 @@ function showLaptopView() {
 }
 
 function showPlantView() {
+  markVisited(room.clickables.find(object => object.userData.id === 'plant'));
   currentState = 'PLANT';
   charAtDesk = false;
-  backBtn.textContent = '◄ BACK';
+  backBtn.innerHTML = pixelIcon('door') + '<span>Back</span>';
   flyTo(CAM_STATES.PLANT.pos, CAM_STATES.PLANT.target, 0.9, () => {
     openSkillTreeModal();
   });
 }
 
 function showPosterView() {
+  markVisited(room.clickables.find(object => object.userData.id === 'poster'));
   currentState = 'POSTER';
   charAtDesk = false;
-  backBtn.textContent = '◄ BACK';
+  backBtn.innerHTML = pixelIcon('door') + '<span>Back</span>';
   flyTo(CAM_STATES.POSTER.pos, CAM_STATES.POSTER.target, 0.9, () => {
     openContactModal();
   });
 }
 
 function showShelfView() {
+  markVisited(room.clickables.find(object => object.userData.id === 'shelf'));
   currentState = 'SHELF';
   charAtDesk = false;
-  backBtn.textContent = '◄ BACK';
+  backBtn.innerHTML = pixelIcon('door') + '<span>Back</span>';
   flyTo(CAM_STATES.SHELF.pos, CAM_STATES.SHELF.target, 0.9, () => {
     openExperienceModal();
   });
 }
 
 function showAboutView() {
+  markVisited(room.clickables.find(object => object.userData.id === 'about'));
   currentState = 'ABOUT';
   charAtDesk = false;
-  backBtn.textContent = '◄ BACK';
+  backBtn.innerHTML = pixelIcon('door') + '<span>Back</span>';
   flyTo(CAM_STATES.ABOUT.pos, CAM_STATES.ABOUT.target, 0.9, () => {
     openAboutModal();
   });
@@ -387,7 +415,7 @@ function backFromView() {
   hoveredObj = null;
   label.style.opacity = '0';
   cur.classList.remove('hovering');
-  backBtn.textContent = '◄ OUTSIDE';
+  backBtn.innerHTML = pixelIcon('door') + '<span>Outside</span>';
   flyTo(CAM_STATES.ROOM.pos, CAM_STATES.ROOM.target, 0.85);
 }
 
@@ -397,8 +425,8 @@ document.addEventListener('pointermove', e => {
   cur.style.top = e.clientY - 7 + 'px';
   mouse.x = (e.clientX / window.innerWidth) * 2 - 1;
   mouse.y = -(e.clientY / window.innerHeight) * 2 + 1;
-  label.style.left = e.clientX + 18 + 'px';
-  label.style.top = e.clientY - 10 + 'px';
+  label.style.left = Math.max(8, Math.min(e.clientX + 18, innerWidth - label.offsetWidth - 8)) + 'px';
+  label.style.top = Math.max(8, e.clientY - 10) + 'px';
 });
 
 // Menu item clicks
@@ -469,10 +497,17 @@ renderer.domElement.addEventListener('click', e => {
   if (hits.length > 0) {
     const obj = getClickable(hits[0].object);
     if (obj) {
-      visitedInteractives.add(obj);
+      markVisited(obj);
       updateOutlineSelection();
 
-      if (obj.userData.id === 'ac') { showAcService(); }
+      if (obj.userData.id === 'arcade' || obj.userData.id === 'cabinet') {
+        const isArcade = obj.userData.id === 'arcade';
+        hud_hint.querySelector('#hint-text').textContent = isArcade ? 'PLAYER ONE READY / A little break between builds.' : 'Small figures. Big adventures. A shelf of favorite worlds.';
+        obj.userData.on = !obj.userData.on;
+        obj.userData.accent.emissiveIntensity = obj.userData.on ? 0.8 : 0.18;
+        if (clickSound?.buffer && !clickSound.isPlaying) clickSound.play();
+      }
+      else if (obj.userData.id === 'ac') { showAcService(); }
       else if (obj.userData.id === 'laptop') { showLaptopView(); }
       else if (obj.userData.id === 'plant') {
         showPlantView();
@@ -485,7 +520,7 @@ renderer.domElement.addEventListener('click', e => {
         obj.userData.on = !obj.userData.on;
         playLampSfx(obj.userData.on);
 
-        label.textContent = obj.userData.on ? '\uD83D\uDCA1 TURN OFF LAMP' : '\uD83D\uDCA1 TURN ON LAMP';
+        label.innerHTML = pixelIcon('sparkle') + (obj.userData.on ? 'TURN OFF LAMP' : 'TURN ON LAMP');
 
         if (obj.userData.toggleLight) obj.userData.toggleLight.intensity = obj.userData.on ? obj.userData.baseLightInt : 0;
         if (obj.userData.toggleSpot) obj.userData.toggleSpot.intensity = obj.userData.on ? obj.userData.baseSpotInt : 0;
@@ -513,7 +548,7 @@ roomNav.addEventListener('click', e => {
   const button = e.target.closest('[data-view]');
   if (!button || enteringWorld || camAnimating || abstraction.transitioning || currentState !== 'ROOM') return;
   const object = room.clickables.find(obj => obj.userData.id === button.dataset.view);
-  visitedInteractives.add(object);
+  markVisited(object);
   roomActions[button.dataset.view]();
 });
 document.addEventListener('keydown', e => {
@@ -618,7 +653,8 @@ function animate() {
           const textStr = isOn ? 'TURN OFF LAMP' : 'TURN ON LAMP';
           lbl = `<svg class="pixel-icon" style="fill: ${bulbFill}; margin-right: 6px;" viewBox="0 0 16 16"><rect x="5" y="2" width="6" height="7" /><rect x="4" y="3" width="8" height="5" /><rect x="6" y="4" width="4" height="3" fill="#1a140e" /><rect x="6" y="9" width="4" height="3" fill="#8a8a8a" /><rect x="7" y="12" width="2" height="1" fill="#555555" /></svg> ${textStr}`;
         }
-        label.innerHTML = lbl;
+        const icon = destinationIcons[obj.userData.id] || ({ cat: 'heart', arcade: 'gamepad', cabinet: 'cards', ac: 'sparkle', lamp: 'sparkle' })[obj.userData.id];
+        label.innerHTML = pixelIcon(icon) + lbl.replace(/<svg[\s\S]*?<\/svg>/, '');
         label.style.opacity = '1';
         cur.classList.add('hovering');
       }

@@ -91,11 +91,11 @@ composer.renderTarget1.texture.encoding = THREE.sRGBEncoding;
 composer.renderTarget2.texture.encoding = THREE.sRGBEncoding;
 
 export const outlinePass = new OutlinePass(new THREE.Vector2(window.innerWidth, window.innerHeight), scene, camera);
-outlinePass.edgeStrength = 2.5;
-outlinePass.edgeGlow = 0.2;
+outlinePass.edgeStrength = 1.8;
+outlinePass.edgeGlow = 0.3;
 outlinePass.edgeThickness = 1;
 outlinePass.pulsePeriod = 0;
-outlinePass.visibleEdgeColor.set('#ffe2a8');
+outlinePass.visibleEdgeColor.set('#ffe8a3');
 outlinePass.hiddenEdgeColor.set('#000000');
 outlinePass.enabled = false;
 composer.addPass(outlinePass);

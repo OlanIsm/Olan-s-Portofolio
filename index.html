@@ -7,7 +7,7 @@
 <title>OLAN.DEV — 3D World</title>
 <meta name="description" content="Portfolio of Olan — CS student at BINUS University. Explore a 3D pixel-art world showcasing projects, skills, and contact info.">
 <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323&family=Pixelify+Sans:wght@500;600;700&family=Fredoka:wght@500;600&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="style.css?v=23">
+<link rel="stylesheet" href="style.css?v=160">
 </head>
 <body>
 
@@ -70,7 +70,7 @@
   <div class="loader-container">
     <div class="loader-badge">
       <span class="loader-badge-dot"></span>
-      <span>SYSTEM BOOT // V2.4</span>
+      <span>A LITTLE WORLD BY OLAN</span>
     </div>
 
     <div class="loader-game-box">
@@ -142,12 +142,8 @@
 
 <!-- HUD -->
 <div id="hud" inert>
-  <div id="loc-box" style="position:fixed">
-    <div id="loc-name">OLAN'S ROOM</div>
-    <div id="loc-sub">// click objects to interact</div>
-  </div>
   <div id="hint-bar" style="position:fixed">
-    <div id="hint-text">Explore the room, or pick a destination</div>
+    <div id="hint-text" role="status">Explore the room, or pick a destination</div>
   </div>
   <nav id="room-nav" aria-label="Explore Olan's room" hidden>
     <button type="button" data-view="laptop">Projects</button>
@@ -157,27 +153,15 @@
     <button type="button" data-view="poster">Contact</button>
   </nav>
   <button id="back-btn" style="position:fixed">◄ BACK</button>
-  <button id="help-btn" style="position:fixed" title="Controls & Help">?</button>
+  <button id="help-btn" style="position:fixed" title="Controls & Help" aria-label="Open exploration guide">?</button>
 </div>
 
 <!-- MODAL PANEL -->
-<div id="modal">
+<div id="modal" inert role="dialog" aria-modal="true" aria-labelledby="modal-title">
   <div id="modal-box">
     <div id="modal-header">
       <div id="modal-title">MODAL TITLE</div>
-      <button id="modal-close" aria-label="Close modal">
-        <svg class="pixel-icon" viewBox="0 0 16 16" style="margin-right: 0; width: 14px; height: 14px; fill: #ffffff;">
-          <rect x="2" y="2" width="3" height="3" />
-          <rect x="11" y="2" width="3" height="3" />
-          <rect x="5" y="5" width="2" height="2" />
-          <rect x="9" y="5" width="2" height="2" />
-          <rect x="7" y="7" width="2" height="2" />
-          <rect x="5" y="9" width="2" height="2" />
-          <rect x="9" y="9" width="2" height="2" />
-          <rect x="2" y="11" width="3" height="3" />
-          <rect x="11" y="11" width="3" height="3" />
-        </svg>
-      </button>
+      <button id="modal-close" aria-label="Close modal"><span aria-hidden="true">&#215;</span></button>
     </div>
     <div id="modal-body"></div>
   </div>
@@ -186,11 +170,11 @@
 <script type="importmap">
 {
   "imports": {
-    "./js/scene/sceneSetup.js": "./js/scene/sceneSetup.js?v=157",
+    "./js/scene/sceneSetup.js": "./js/scene/sceneSetup.js?v=160",
     "./js/scene/exteriorScene.js": "./js/scene/exteriorScene.js?v=157",
     "./js/scene/materials.js": "./js/scene/materials.js?v=156",
     "./js/scene/sceneUtils.js": "./js/scene/sceneUtils.js?v=156",
-    "./js/objects/roomObjects.js": "./js/objects/roomObjects.js?v=157",
+    "./js/objects/roomObjects.js": "./js/objects/roomObjects.js?v=160",
     "./js/audio/audioManager.js": "./js/audio/audioManager.js?v=157",
     "three": "https://unpkg.com/three@0.128.0/build/three.module.js",
     "three/addons/": "https://unpkg.com/three@0.128.0/examples/jsm/"
@@ -198,7 +182,7 @@
 }
 </script>
 
-<script type="module" src="main.js?v=158"></script>
+<script type="module" src="main.js?v=160"></script>
 
 </body>
 </html>

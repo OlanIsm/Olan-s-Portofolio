@@ -3,6 +3,7 @@ import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { scene, tvLight, lampLight } from '../scene/sceneSetup.js';
 import { M } from '../scene/materials.js';
 import { batchStatic, canvasTexture } from '../scene/sceneUtils.js';
+import { addRoomDecor } from './roomDecor.js';
 
 export function box(w, h, d, mat, x = 0, y = 0, z = 0, castShadow = true, parent = scene) {
   const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), mat);
@@ -382,7 +383,9 @@ export function createRoomObjects() {
   scene.add(particles);
 
   addStudioDetails(deskGroup, shelfGroup, windowGroup);
-  const clickables = [laptopGroup, tvGroup, shelfGroup, posterGroup, plantG, floorLampL, floorLampR, ceilingBulbG, catGroup, acGroup];
+  const decor = addRoomDecor(box);
+  decor.forEach(addSparkle);
+  const clickables = [laptopGroup, tvGroup, shelfGroup, posterGroup, plantG, floorLampL, floorLampR, ceilingBulbG, catGroup, acGroup, ...decor];
   clickables.forEach(obj => batchStatic(obj, [plantCrown]));
   const movableProps = [chairG, deskGroup, musicKeyboardG, opPoster, plant2];
   movableProps.forEach(obj => batchStatic(obj));

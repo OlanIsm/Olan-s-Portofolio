@@ -1,23 +1,14 @@
+import { skillIcon } from './pixelIcons.js';
 import { skillsTreeData } from '../data/skillsData.js?v=12';
-import { modal, modalBody, openModal } from './modalManager.js?v=130';
+import { modal, modalBody, openModal } from './modalManager.js?v=160';
 import { clickSound } from '../audio/audioManager.js';
 
 let activeNodeId = 'olan';
 
 export function openSkillTreeModal() {
-  const titleHTML = `
-    <svg class="pixel-icon" viewBox="0 0 16 16">
-      <rect x="3" y="5" width="2" height="2" />
-      <rect x="4" y="7" width="2" height="2" />
-      <rect x="7" y="2" width="2" height="12" />
-      <rect x="11" y="4" width="2" height="2" />
-      <rect x="10" y="6" width="2" height="2" />
-      <rect x="9" y="8" width="2" height="2" />
-      <rect x="4" y="14" width="8" height="2" />
-    </svg>
-    OLAN'S RPG SKILL TREE
-  `;
+  const titleHTML = "OLAN'S SKILL TREE";
 
+  activeNodeId = 'olan';
   const WORLD_CENTER = 1200;
 
   // Build Node Map for easy parent lookup
@@ -49,15 +40,15 @@ export function openSkillTreeModal() {
         pathD = `M ${px} ${py} C ${mx} ${py}, ${mx} ${cy}, ${cx} ${cy}`;
       }
 
-      let strokeColor = '#8a7048';
+      let strokeColor = '#9eaf86';
       let glowColor = 'rgba(138, 112, 72, 0.4)';
-      if (node.category === 'tech') { strokeColor = '#4a90e2'; glowColor = 'rgba(74, 144, 226, 0.5)'; }
-      else if (node.category === 'soft') { strokeColor = '#ffaa33'; glowColor = 'rgba(255, 170, 51, 0.5)'; }
-      else if (node.category === 'hobby') { strokeColor = '#e06699'; glowColor = 'rgba(224, 102, 153, 0.5)'; }
+      if (node.category === 'tech') { strokeColor = '#86aebd'; glowColor = 'rgba(74, 144, 226, 0.5)'; }
+      else if (node.category === 'soft') { strokeColor = '#c3aa6f'; glowColor = 'rgba(255, 170, 51, 0.5)'; }
+      else if (node.category === 'hobby') { strokeColor = '#c89eb5'; glowColor = 'rgba(224, 102, 153, 0.5)'; }
 
       svgPathsHTML += `
         <!-- Glow Line -->
-        <path d="${pathD}" fill="none" stroke="${glowColor}" stroke-width="6" stroke-linecap="round" />
+        <path d="${pathD}" fill="none" stroke="${glowColor}" stroke-width="7" opacity="0.16" stroke-linecap="round" />
         <!-- Core Line -->
         <path d="${pathD}" fill="none" stroke="${strokeColor}" stroke-width="2.5" stroke-linecap="round" />
         <!-- Node Joint Dot -->
@@ -80,12 +71,12 @@ export function openSkillTreeModal() {
     if (node.id === activeNodeId) nodeClass += ' active';
 
     nodesHTML += `
-      <div class="${nodeClass}" data-id="${node.id}" style="left: ${left}px; top: ${top}px;">
+      <button type="button" aria-label="${node.name}" aria-pressed="${node.id === activeNodeId}" class="${nodeClass}" data-id="${node.id}" style="left: ${left}px; top: ${top}px;">
         <div class="st-node-inner">
-          <div class="st-node-icon">${node.icon}</div>
+          <div class="st-node-icon">${skillIcon(node)}</div>
         </div>
         <div class="st-node-label">${node.name}</div>
-      </div>
+      </button>
     `;
   });
 
@@ -114,9 +105,9 @@ export function openSkillTreeModal() {
       <div class="st-hud-bottom-bar">
         <div class="st-hud-hint">[ DRAG ] Pan &nbsp;·&nbsp; [ SCROLL ] Zoom &nbsp;·&nbsp; [ CLICK ] Select</div>
         <div class="st-hud-btn-group">
-          <button id="st-reset-btn" class="st-hud-btn">CENTER OLAN</button>
-          <button id="st-zoom-in" class="st-hud-btn">+</button>
-          <button id="st-zoom-out" class="st-hud-btn">-</button>
+          <button id="st-reset-btn" class="st-hud-btn">CENTER</button>
+          <button aria-label="Zoom in" id="st-zoom-in" class="st-hud-btn">+</button>
+          <button aria-label="Zoom out" id="st-zoom-out" class="st-hud-btn">-</button>
         </div>
       </div>
 
@@ -132,7 +123,7 @@ export function openSkillTreeModal() {
     </div>
   `;
 
-  openModal(titleHTML, bodyHTML, 'st-modal-wide');
+  openModal(titleHTML, bodyHTML, 'st-modal-wide', 'tree');
 
   // ──────────────────────────────────────────
   // VIEWPORT PAN & ZOOM ENGINE
@@ -141,120 +132,61 @@ export function openSkillTreeModal() {
   const world = document.getElementById('st-canvas-world');
   if (!viewport || !world) return;
 
-  let scale = 0.85;
-  let panX = 0;
-  let panY = 0;
-
+  let scale = 0.7;
+  let panX = 0, panY = 0;
   function updateTransform() {
     world.style.transform = `translate(${panX}px, ${panY}px) scale(${scale})`;
   }
-
   function centerOnNode(x = 0, y = 0) {
     const rect = viewport.getBoundingClientRect();
-    const vw = rect.width || 900;
-    const vh = rect.height || 650;
-    const targetX = WORLD_CENTER + x;
-    const targetY = WORLD_CENTER + y;
-
-    panX = (vw / 2) - (targetX * scale);
-    panY = (vh / 2) - (targetY * scale);
+    panX = rect.width / 2 - (WORLD_CENTER + x) * scale;
+    panY = rect.height * (rect.width < 600 ? 0.62 : 0.52) - (WORLD_CENTER + y) * scale;
     updateTransform();
   }
-
-  // Initial center on Olan node
-  setTimeout(() => {
-    centerOnNode(0, 0);
-  }, 50);
-
-  // Mouse Pan State
-  let isDragging = false;
-  let startX = 0;
-  let startY = 0;
-
-  viewport.addEventListener('mousedown', e => {
-    if (e.target.closest('.st-hud-bottom-bar') || e.target.closest('.st-detail-panel')) return;
-    isDragging = true;
-    startX = e.clientX - panX;
-    startY = e.clientY - panY;
-    viewport.style.cursor = 'grabbing';
+  function fitTree() {
+    const xs = skillsTreeData.map(n => n.x), ys = skillsTreeData.map(n => n.y);
+    const width = viewport.clientWidth, height = viewport.clientHeight;
+    const minX = Math.min(...xs) - 75, maxX = Math.max(...xs) + 75;
+    const minY = Math.min(...ys) - 50, maxY = Math.max(...ys) + 70;
+    if (width < 600) { scale = 0.58; centerOnNode(); return; }
+    scale = Math.max(0.4, Math.min(0.85, (width - 50) / (maxX - minX), (height - 80) / (maxY - minY)));
+    panX = width / 2 - (WORLD_CENTER + (minX + maxX) / 2) * scale;
+    panY = height / 2 - (WORLD_CENTER + (minY + maxY) / 2) * scale;
+    updateTransform();
+  }
+  requestAnimationFrame(fitTree);
+  let dragging = false, moved = false, lastX = 0, lastY = 0;
+  viewport.addEventListener('pointerdown', e => {
+    if (e.button !== 0 || e.target.closest('.st-hud-bottom-bar, .st-detail-panel')) return;
+    dragging = true; moved = false; lastX = e.clientX; lastY = e.clientY;
   });
-
-  window.addEventListener('mousemove', e => {
-    if (!isDragging) return;
-    panX = e.clientX - startX;
-    panY = e.clientY - startY;
+  viewport.addEventListener('pointermove', e => {
+    if (!dragging) return;
+    const dx = e.clientX - lastX, dy = e.clientY - lastY;
+    if (!moved && Math.abs(dx) + Math.abs(dy) < 4) return;
+    moved = true;
+    viewport.setPointerCapture(e.pointerId);
+    panX += dx; panY += dy; lastX = e.clientX; lastY = e.clientY;
     updateTransform();
   });
-
-  window.addEventListener('mouseup', () => {
-    if (isDragging) {
-      isDragging = false;
-      viewport.style.cursor = 'grab';
-    }
-  });
-
-  // Touch pan support
-  let lastTouchX = 0;
-  let lastTouchY = 0;
-  viewport.addEventListener('touchstart', e => {
-    if (e.touches.length === 1) {
-      isDragging = true;
-      lastTouchX = e.touches[0].clientX;
-      lastTouchY = e.touches[0].clientY;
-    }
-  }, { passive: true });
-
-  viewport.addEventListener('touchmove', e => {
-    if (isDragging && e.touches.length === 1) {
-      const dx = e.touches[0].clientX - lastTouchX;
-      const dy = e.touches[0].clientY - lastTouchY;
-      lastTouchX = e.touches[0].clientX;
-      lastTouchY = e.touches[0].clientY;
-      panX += dx;
-      panY += dy;
-      updateTransform();
-    }
-  }, { passive: true });
-
-  viewport.addEventListener('touchend', () => { isDragging = false; });
-
-  // Scroll Zoom
+  viewport.addEventListener('pointerup', () => { dragging = false; });
+  viewport.addEventListener('pointercancel', () => { dragging = false; });
+  viewport.addEventListener('click', e => { if (moved) { e.stopPropagation(); moved = false; } }, true);
+  function zoom(factor, x = viewport.clientWidth / 2, y = viewport.clientHeight / 2) {
+    const next = Math.max(0.3, Math.min(1.8, scale * factor));
+    panX = x - (x - panX) * next / scale;
+    panY = y - (y - panY) * next / scale;
+    scale = next; updateTransform();
+  }
   viewport.addEventListener('wheel', e => {
     e.preventDefault();
-    const zoomFactor = e.deltaY < 0 ? 1.12 : 0.88;
-    const newScale = Math.max(0.45, Math.min(1.8, scale * zoomFactor));
-
     const rect = viewport.getBoundingClientRect();
-    const mouseX = (rect.width / 2) - panX;
-    const mouseY = (rect.height / 2) - panY;
-
-    panX -= mouseX * (newScale / scale - 1);
-    panY -= mouseY * (newScale / scale - 1);
-    scale = newScale;
-    updateTransform();
+    zoom(e.deltaY < 0 ? 1.12 : 1 / 1.12, e.clientX - rect.left, e.clientY - rect.top);
   }, { passive: false });
+  document.getElementById('st-reset-btn').addEventListener('click', fitTree);
+  document.getElementById('st-zoom-in').addEventListener('click', () => zoom(1.2));
+  document.getElementById('st-zoom-out').addEventListener('click', () => zoom(1 / 1.2));
 
-  // HUD Controls
-  document.getElementById('st-reset-btn')?.addEventListener('click', () => {
-    if (clickSound && clickSound.isPlaying) clickSound.stop();
-    if (clickSound) clickSound.play();
-    scale = 0.85;
-    centerOnNode(0, 0);
-  });
-
-  document.getElementById('st-zoom-in')?.addEventListener('click', () => {
-    scale = Math.min(1.8, scale * 1.25);
-    centerOnNode(0, 0);
-  });
-
-  document.getElementById('st-zoom-out')?.addEventListener('click', () => {
-    scale = Math.max(0.45, scale * 0.8);
-    centerOnNode(0, 0);
-  });
-
-  // ──────────────────────────────────────────
-  // NODE SELECTION & DETAIL PANEL UPDATE
-  // ──────────────────────────────────────────
   const dpIcon = document.getElementById('st-dp-icon');
   const dpTitle = document.getElementById('st-dp-title');
   const dpSub = document.getElementById('st-dp-sub');
@@ -262,7 +194,7 @@ export function openSkillTreeModal() {
 
   function updateDetailPanel(node) {
     if (!node) return;
-    if (dpIcon) dpIcon.innerHTML = node.icon;
+    if (dpIcon) dpIcon.innerHTML = skillIcon(node);
     if (dpTitle) dpTitle.textContent = node.name;
     if (dpSub) dpSub.textContent = node.subtitle || (node.category ? `${node.category.toUpperCase()} SKILL` : 'SKILL NODE');
     if (dpDesc) dpDesc.textContent = node.desc || 'No additional description.';
@@ -277,18 +209,27 @@ export function openSkillTreeModal() {
     nodeEl.addEventListener('click', e => {
       e.stopPropagation();
       if (clickSound && clickSound.isPlaying) clickSound.stop();
-      if (clickSound) clickSound.play();
+      if (clickSound?.buffer) clickSound.play();
 
       const nodeId = nodeEl.dataset.id;
       activeNodeId = nodeId;
 
-      world.querySelectorAll('.st-node').forEach(n => n.classList.remove('active'));
+      world.querySelectorAll('.st-node').forEach(n => { n.classList.remove('active'); n.setAttribute('aria-pressed', 'false'); });
       nodeEl.classList.add('active');
+      nodeEl.setAttribute('aria-pressed', 'true');
 
       const data = nodeMap.get(nodeId);
       if (data) updateDetailPanel(data);
     });
 
+    nodeEl.addEventListener('focus', () => {
+      const node = nodeMap.get(nodeEl.dataset.id);
+      updateDetailPanel(node);
+      if (nodeEl.matches(':focus-visible')) {
+        viewport.scrollTop = 0; viewport.scrollLeft = 0;
+        centerOnNode(node.x, node.y);
+      }
+    });
     nodeEl.addEventListener('mouseenter', () => {
       const nodeId = nodeEl.dataset.id;
       const data = nodeMap.get(nodeId);

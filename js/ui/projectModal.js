@@ -1,35 +1,28 @@
 import { projectsData } from '../data/projectsData.js';
-import { openModal } from './modalManager.js?v=130';
+import { openModal } from './modalManager.js?v=160';
 
 export function openProjectModal() {
-  const titleHTML = `
-    <svg class="pixel-icon" viewBox="0 0 16 16">
-      <rect x="2" y="2" width="12" height="9" />
-      <rect x="3" y="3" width="10" height="7" fill="#241c12" />
-      <rect x="0" y="12" width="16" height="2" />
-      <rect x="7" y="12" width="2" height="1" fill="#241c12" />
-    </svg>
-    OLAN'S PROJECTS
-  `;
+  const titleHTML = "OLAN'S PROJECTS";
 
   let bodyHTML = '';
   projectsData.forEach(p => {
     const techChips = p.tech.map(t => `<span class="tech-chip">${t}</span>`).join('');
-    const tagStyleAttr = p.tagStyle ? `style="${p.tagStyle}"` : '';
+
     bodyHTML += `
-      <div class="proj-card-row" onclick="window.open('${p.url}', '_blank')">
+      <article class="proj-card-row">
         <div class="proj-card-info">
-          <div class="proj-tag" ${tagStyleAttr}>${p.tag}</div>
+          <div class="proj-tag" >${p.tag}</div>
           <div class="proj-name">${p.name}</div>
           <div class="proj-desc">${p.desc}</div>
           <div class="proj-tech">${techChips}</div>
+          <a class="project-open" href="${p.url}" target="_blank" rel="noopener noreferrer">Explore project <span aria-hidden="true">&#8599;</span></a>
         </div>
-        <div class="proj-card-img" style="background: #120e0a;">
+        <div class="proj-card-img">
           <img src="${p.img}" alt="${p.name}" loading="lazy" decoding="async" style="object-fit: contain;">
         </div>
-      </div>
+      </article>
     `;
   });
 
-  openModal(titleHTML, bodyHTML, 'proj-modal-wide');
+  openModal(titleHTML, bodyHTML, 'proj-modal-wide', 'laptop');
 }
