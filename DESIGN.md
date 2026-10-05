@@ -12,6 +12,8 @@ Press Start 2P for short titles. Pixelify Sans for readable copy and controls. A
 ## Panel structure
 The icon straddles the top border to the left of the title. The header remains outside the scrolling content. Cream surfaces, pixel borders, short offset shadows, and restrained motion belong to the requested game aesthetic. Mobile uses a smaller emblem, stacked content, and visible close controls.
 
+Header icons and titles have transparent backgrounds with no enclosing boxes. Large bold Pixelify Sans titles balance the pixel emblems; a fine cream text outline preserves contrast over the room. The arcade sidebar contains only a best-score display and A/D key hints, with status announcements kept available to screen readers.
+
 ## Interaction
 Unvisited clickable room objects glow; visited objects still highlight on hover. Destination shortcuts count as exploration and receive a checkmark. Exploration resets on reload. Skill-tree nodes support pointer pan, zoom controls, and keyboard selection. Modals contain focus, restore it on close, and support Escape.
 

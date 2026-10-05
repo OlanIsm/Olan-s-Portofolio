@@ -1,17 +1,17 @@
-import { openModal, closeModal, modal, modalBody } from './modalManager.js?v=160';
+import { openModal, modal, modalBody } from './modalManager.js?v=160';
 import { pixelIcon } from './pixelIcons.js';
 import { createGame, stepGame, WIDTH, HEIGHT } from '../game/spacePatrol.js';
 
 export function openArcadeModal() {
   openModal('OLAN’S SPACE PATROL', `<div class="arcade-layout">
     <div class="arcade-console">
-      <div class="arcade-scoreboard"><span>SCORE <strong id="arcade-score">00000</strong></span><span>BEST <strong id="arcade-best">00000</strong></span><span id="arcade-lives" aria-label="3 lives">♥ ♥ ♥</span></div>
+      <div class="arcade-scoreboard"><span>SCORE <strong id="arcade-score">00000</strong></span><span id="arcade-lives" aria-label="3 lives">♥ ♥ ♥</span></div>
       <div class="arcade-screen"><canvas id="arcade-canvas" width="320" height="400" tabindex="0" aria-label="Space Patrol. Move with left and right arrows or A and D. Shooting is automatic. P pauses."></canvas>
         <div class="arcade-overlay"><div class="arcade-badge">${pixelIcon('ship')}</div><p class="arcade-eyebrow">PLAYER ONE / READY</p><h3>SPACE<br>PATROL</h3><p class="arcade-message">A tiny mission among the stars.</p><button class="arcade-play">START MISSION</button></div>
       </div>
       <div class="arcade-controls"><button data-move="-1" aria-label="Move left">◀</button><button id="arcade-pause" disabled>PAUSE</button><button data-move="1" aria-label="Move right">▶</button></div>
     </div>
-    <aside class="arcade-guide"><span class="arcade-eyebrow">A LITTLE BREAK BETWEEN BUILDS</span><h3>Clear skies,<br>space cadet.</h3><p>Steer your ship. Clear the invaders. Make every heart count.</p><ul><li><kbd>←</kbd> <kbd>→</kbd> or <kbd>A</kbd> <kbd>D</kbd> to move</li><li>Your ship fires automatically</li><li>On touch: hold the arrows or drag across the stars</li><li>Three hearts. Escaped invaders cost a heart.</li></ul><p class="arcade-tip">${pixelIcon('trophy')} Your best score stays on this device.</p><button class="arcade-exit">BACK TO ROOM</button><p id="arcade-status" role="status" class="arcade-status">Ready when you are.</p></aside>
+    <aside class="arcade-guide"><div class="arcade-record">${pixelIcon('trophy')}<span>BEST SCORE</span><strong id="arcade-best">00000</strong></div><div class="arcade-keys" aria-label="Move left with A, right with D"><kbd>A</kbd><kbd>D</kbd></div><p id="arcade-status" role="status" class="sr-only">Ready when you are.</p></aside>
   </div>`, 'arcade-modal', 'ship');
   const root = modalBody.querySelector('.arcade-layout');
   const canvas = root.querySelector('canvas'), ctx = canvas.getContext('2d');
@@ -82,7 +82,7 @@ export function openArcadeModal() {
   }
   play.addEventListener('click', start, options);
   pauseButton.addEventListener('click', () => showOverlay('paused'), options);
-  root.querySelector('.arcade-exit').addEventListener('click', closeModal, options);
+
   document.addEventListener('keydown', e => {
     const key = e.key.toLowerCase();
     if (['arrowleft', 'arrowright', 'a', 'd'].includes(key) && state === 'running') { e.preventDefault(); keys.add(key); target = undefined; }

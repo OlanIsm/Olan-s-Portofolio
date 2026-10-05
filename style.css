@@ -1765,10 +1765,10 @@ button:focus-visible, a:focus-visible, [tabindex="0"]:focus-visible { outline: 3
 #modal-box, #modal-box.proj-modal-wide, #modal-box.about-modal-wide, #modal-box.contact-modal-wide, #modal-box.st-modal-wide { position: relative; background: var(--cream); width: min(1120px, 94vw); max-width: 1120px; max-height: calc(100dvh - 100px); border: 3px solid var(--edge); box-shadow: 5px 6px 0 #c4b99d, 0 20px 70px #20372735; overflow: visible; }
 #modal-box { width: min(820px, 94vw); }
 #modal-header { flex-shrink: 0; min-height: 55px; padding: 0; background: transparent; border: 0; position: relative; }
-#modal-title { position: absolute; top: -39px; left: 24px; display: flex; align-items: center; gap: 14px; max-width: calc(100% - 105px); min-height: 76px; color: var(--ink); text-shadow: none; font: 13px/1.7 'Press Start 2P', monospace; }
-.modal-emblem { width: 80px; height: 80px; display: grid; place-items: center; flex-shrink: 0; background: var(--cream); }
+#modal-title { position: absolute; top: -39px; left: 24px; display: flex; align-items: center; gap: 14px; max-width: calc(100% - 105px); min-height: 76px; color: var(--ink); text-shadow: none; font: 700 48px/1 'Pixelify Sans', sans-serif; }
+.modal-emblem { width: 80px; height: 80px; display: grid; place-items: center; flex-shrink: 0; background: transparent; }
 .modal-emblem .pixel-art { width: 80px; height: 80px; filter: drop-shadow(2px 3px 0 #d1c7ae); }
-.modal-heading-text { background: var(--cream); padding: 7px 15px 7px 0; }
+.modal-heading-text { background: transparent; padding: 0; text-shadow: -1px -1px 0 var(--cream), 1px -1px 0 var(--cream), -1px 1px 0 var(--cream), 1px 1px 0 var(--cream); }
 #modal-close { position: absolute; right: 16px; top: 12px; width: 38px; height: 38px; color: #805446; background: #f0c7b5; border: 2px solid #bd9380; box-shadow: inset 2px 2px #fff0dd, 2px 2px #d5b29a; font: 30px/1 'Pixelify Sans', sans-serif; }
 #modal-close:hover { background: #eab19f; box-shadow: inset 2px 2px #ffe1cd, 2px 2px #d5b29a; }
 #modal-body { padding: 12px 28px 28px; min-height: 0; scrollbar-color: #a4b28b #f3ebda; scrollbar-width: thin; overscroll-behavior: contain; }
@@ -1876,7 +1876,7 @@ kbd { padding: 4px 7px; border: 1px solid #c0ba9c; box-shadow: 0 2px #d8cfb4; ba
 @media (max-width: 760px) {
   #modal { padding: 58px 10px 16px; }
   #modal-box, #modal-box.proj-modal-wide, #modal-box.about-modal-wide, #modal-box.contact-modal-wide, #modal-box.st-modal-wide { width: 100%; max-height: calc(100dvh - 90px); }
-  #modal-title { left: 10px; top: -29px; gap: 8px; font-size: 11px; min-height: 56px; max-width: calc(100% - 62px); }
+  #modal-title { left: 10px; top: -29px; gap: 8px; font-size: 28px; min-height: 56px; max-width: calc(100% - 62px); }
   .modal-emblem, .modal-emblem .pixel-art { width: 56px; height: 56px; }
   .modal-heading-text { padding-right: 6px; }
   #modal-close { top: 10px; right: 10px; width: 36px; height: 36px; }
@@ -1953,19 +1953,24 @@ kbd { padding: 4px 7px; border: 1px solid #c0ba9c; box-shadow: 0 2px #d8cfb4; ba
 .arcade-layout button:disabled { opacity: .5; cursor: default; }
 .arcade-controls { display: grid; grid-template-columns: 1fr 1.4fr 1fr; gap: 10px; margin-top: 12px; }
 .arcade-controls [data-move] { touch-action: none; user-select: none; font-size: 18px; background: #fff8e9; }
-.arcade-guide h3 { font: 19px/1.65 'Press Start 2P', monospace; color: #405346; margin: 14px 0; }
-.arcade-guide p, .arcade-guide li { font: 22px/1.35 'VT323', monospace; color: #586954; }
-.arcade-guide ul { padding-left: 20px; margin: 18px 0; }
-.arcade-guide li { margin: 10px 0; }
-.arcade-guide kbd { background: #e4e9d8; border: 1px solid #a0af91; padding: 1px 4px; }
-.arcade-tip { display: flex; align-items: center; gap: 12px; padding-top: 14px; border-top: 1px solid #d6c4a5; }
-.arcade-tip .pixel-art { width: 36px; height: 36px; flex: 0 0 auto; }
-.arcade-guide .arcade-status { font-size: 18px; min-height: 2.7em; }
+
+.arcade-guide { display: flex; flex-direction: column; align-items: center; gap: 42px; }
+.arcade-record { display: flex; flex-direction: column; align-items: center; gap: 16px; color: #405346; }
+.arcade-record .pixel-art { width: 72px; height: 72px; }
+.arcade-record span { font: 10px/1.5 'Press Start 2P', monospace; }
+.arcade-record strong { font: 700 48px/1 'Pixelify Sans', sans-serif; font-variant-numeric: tabular-nums; }
+.arcade-keys { display: flex; gap: 14px; }
+.arcade-keys kbd { display: grid; place-items: center; width: 48px; height: 48px; font: 700 28px 'Pixelify Sans', sans-serif; background: #e4e9d8; border: 2px solid #a0af91; box-shadow: 0 3px 0 #a0af91; }
 @media (max-width: 600px) {
   #modal-box.arcade-modal { width: 100%; }
   .arcade-layout { grid-template-columns: minmax(0, 1fr); gap: 20px; }
   .arcade-console { width: min(100%, 340px); box-sizing: border-box; margin: auto; }
-  .arcade-guide h3 { font-size: 15px; }
-  .arcade-guide > .arcade-eyebrow { display: none; }
+
+  .arcade-guide { flex-direction: row; justify-content: space-between; gap: 16px; }
+  .arcade-record { display: grid; grid-template-columns: 40px auto; column-gap: 10px; row-gap: 6px; }
+  .arcade-record .pixel-art { width: 40px; height: 40px; grid-row: span 2; }
+  .arcade-record strong { font-size: 28px; }
+  .arcade-record span { font-size: 8px; }
+
   .arcade-overlay h3 { font-size: 20px; }
 }
