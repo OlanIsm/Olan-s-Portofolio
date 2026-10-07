@@ -110,9 +110,38 @@ const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
         const { scene } = await import('/js/scene/sceneSetup.js');
         const THREE = await import('three');
         const object = scene.getObjectByName('AbstractedKaufmo');
-        return { visible: object.visible, height: new THREE.Box3().setFromObject(object).getSize(new THREE.Vector3()).y };
+        scene.updateMatrixWorld(true);
+        const bounds = new THREE.Box3(), vertex = new THREE.Vector3();
+        let depth = true, meshes = 0;
+        object.traverse(mesh => {
+          if (!mesh.isMesh) return;
+          meshes++;
+          depth &&= (Array.isArray(mesh.material) ? mesh.material : [mesh.material])
+            .every(material => material.depthTest && material.depthWrite);
+          if (mesh.isSkinnedMesh) mesh.skeleton.update();
+          const positions = mesh.geometry.attributes.position;
+          for (let i = 0; i < positions.count; i++) {
+            vertex.fromBufferAttribute(positions, i);
+            if (mesh.isSkinnedMesh) mesh.boneTransform(i, vertex);
+            bounds.expandByPoint(vertex.applyMatrix4(mesh.matrixWorld));
+          }
+        });
+        const walls = scene.getObjectByName('AbstractionRoom').children
+          .filter(rift => rift.name === 'RealityRift' && Math.abs(rift.position.x) === 7.72);
+        return { visible: object.visible, size: bounds.getSize(new THREE.Vector3()).toArray(),
+          floor: bounds.min.y, depth, meshes,
+          silhouette: !!object.getObjectByName('AbstractedSilhouetteGroup'),
+          walls: walls.map(rift => ({ x: rift.position.x,
+            normal: new THREE.Vector3(0, 0, 1).applyQuaternion(rift.quaternion).toArray() })) };
       });
-      assert.ok(!monster.visible && monster.height > 4, `Abstracted monster should wait outside: ${JSON.stringify(monster)}`);
+      assert.ok(!monster.visible && monster.size[1] > 5 && monster.size[1] < 6.5,
+        `Visible walking pose must fit its target height: ${JSON.stringify(monster)}`);
+      assert.ok(Math.abs(monster.floor) < .5, `Monster feet must stay near the ground: ${monster.floor}`);
+      assert.ok(monster.depth && monster.meshes > 0 && !monster.silhouette, 'Use depth-tested GLB meshes without a flat silhouette');
+      assert.ok(monster.size[0] > 1 && monster.size[2] > 1, 'Monster must retain volume');
+      assert.equal(monster.walls.length, 2, 'Both side walls need a large abstraction tear');
+      assert.ok(monster.walls.every(wall => wall.normal[0] * Math.sign(wall.x) < -.99),
+        'Side tears must face into the room and remain flush with the walls');
       assert.equal(ruin.width, ruin.viewport, 'Horizontal overflow');
       if (mobile) assert.equal(ruin.displacement, 0, 'Reduced motion must disable glitch bursts');
       if (captures) await page.screenshot({ path: `${captures}/room-${name}.png` });

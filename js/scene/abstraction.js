@@ -9,7 +9,7 @@ import {
   exteriorGroup, skyDome, sunSprite, breakableRoofs, outdoorLights, birdFlock
 } from './exteriorScene.js';
 import { canvasTexture, batchStatic } from './sceneUtils.js';
-import { prepModel, fitModelToHeight } from '../objects/roomObjects.js';
+import { prepModel } from '../objects/roomObjects.js';
 import {
   startAbstractionAudio, updateAbstractionAudio, playAbstractionImpact, setAbstractionMuted
 } from '../audio/audioManager.js';
@@ -251,85 +251,42 @@ export function createAbstraction(room, roomContainer) {
     batchStatic(group);
   }
 
-  function addMonsterSilhouette(parent) {
-    const points = [
-      [-1.55, .05], [-2.05, .52], [-1.48, .74], [-1.82, 1.28], [-1.24, 1.18],
-      [-1.38, 1.86], [-.82, 1.66], [-.92, 2.48], [-.27, 2.18], [.02, 2.92],
-      [.42, 2.34], [.93, 2.62], [.83, 2.02], [1.55, 2.22], [1.22, 1.55],
-      [1.86, 1.46], [1.36, .95], [1.78, .47], [1.16, .31], [1.34, .04],
-      [.72, .14], [.46, -.42], [.06, .02], [-.36, -.52], [-.62, .08], [-1.12, -.30]
-    ].map(([x, y]) => new THREE.Vector2(x, y));
-    const shape = new THREE.Shape(points);
-    const geometry = new THREE.ShapeGeometry(shape);
-    const visual = new THREE.Group();
-    visual.name = 'AbstractedSilhouetteGroup';
-    visual.scale.set(1.12, 1.7, 1);
-    parent.add(visual);
-    const outline = new THREE.Mesh(geometry, new THREE.MeshBasicMaterial({
-      color: 0xb52b62, side: THREE.DoubleSide, depthTest: false, depthWrite: false, toneMapped: false
-    }));
-    outline.name = 'AbstractedSilhouetteRim';
-    outline.position.set(0, 0, -.34);
-    outline.scale.set(1.08, 1.08, 1);
-    outline.renderOrder = 15;
-    visual.add(outline);
-    const body = new THREE.Mesh(geometry, new THREE.MeshBasicMaterial({
-      color: 0x1c0615, side: THREE.DoubleSide, depthTest: false, depthWrite: false, toneMapped: false
-    }));
-    body.name = 'AbstractedSilhouette';
-    body.position.z = -.30;
-    body.renderOrder = 16;
-    visual.add(body);
-
-    const eyeColors = [0x26e7e4, 0xff2e98, 0x8eff32, 0xffbd32, 0x44a7ff];
-    [[-.83, 1.28, .30], [.24, 2.05, .34], [.86, 1.42, .28], [-.16, .74, .25], [.78, .46, .22]]
-      .forEach(([x, y, size], i) => {
-        const eye = new THREE.Group();
-        eye.position.set(x, y, .02);
-        const ring = new THREE.Mesh(new THREE.CircleGeometry(size, 18), new THREE.MeshBasicMaterial({
-          color: eyeColors[i], side: THREE.DoubleSide, depthTest: false, depthWrite: false, toneMapped: false
-        }));
-        const iris = new THREE.Mesh(new THREE.CircleGeometry(size * .58, 16), new THREE.MeshBasicMaterial({
-          color: 0xf5edc7, side: THREE.DoubleSide, depthTest: false, depthWrite: false, toneMapped: false
-        }));
-        const pupil = new THREE.Mesh(new THREE.CircleGeometry(size * .27, 12), new THREE.MeshBasicMaterial({
-          color: 0x09020d, side: THREE.DoubleSide, depthTest: false, depthWrite: false, toneMapped: false
-        }));
-        ring.renderOrder = 17; iris.renderOrder = 18; pupil.renderOrder = 19;
-        eye.add(ring, iris, pupil);
-        visual.add(eye);
-      });
-  }
-
   function loadAbstractedMonster() {
     new GLTFLoader().load('model/abstracted.glb', gltf => {
       const model = gltf.scene;
       prepModel(model);
-      fitModelToHeight(model, 5.6);
-      model.scale.multiplyScalar(1.8);
-      model.position.z = .18;
-      model.traverse(object => {
-        if (!object.isMesh) return;
-        object.frustumCulled = false;
-        object.renderOrder = 20;
-        const materials = Array.isArray(object.material) ? object.material : [object.material];
-        materials.forEach(material => { material.depthTest = false; material.depthWrite = false; });
-      });
-      monsterGroup = new THREE.Group();
-      monsterGroup.name = 'AbstractedKaufmo';
-      monsterGroup.position.copy(monsterPath[0]);
-      monsterGroup.rotation.y = Math.PI;
-      monsterGroup.visible = false;
-      addMonsterSilhouette(monsterGroup);
-      monsterGroup.add(model);
-      outsideFX.add(monsterGroup);
       const walk = THREE.AnimationClip.findByName(gltf.animations, 'Walk') ||
         THREE.AnimationClip.findByName(gltf.animations, 'Run') ||
         THREE.AnimationClip.findByName(gltf.animations, 'Idle');
       if (walk) {
         monsterMixer = new THREE.AnimationMixer(model);
         monsterMixer.clipAction(walk).setLoop(THREE.LoopRepeat, Infinity).play();
+        monsterMixer.update(0);
       }
+      // r128 Box3 ignores skinning. Fit the visible walking pose, including its feet.
+      model.updateMatrixWorld(true);
+      const bounds = new THREE.Box3(), vertex = new THREE.Vector3();
+      model.traverse(object => {
+        if (!object.isMesh) return;
+        object.frustumCulled = false;
+        if (object.isSkinnedMesh) object.skeleton.update();
+        const positions = object.geometry.attributes.position;
+        for (let i = 0; i < positions.count; i++) {
+          vertex.fromBufferAttribute(positions, i);
+          if (object.isSkinnedMesh) object.boneTransform(i, vertex);
+          bounds.expandByPoint(vertex.applyMatrix4(object.matrixWorld));
+        }
+      });
+      const scale = 5.6 / bounds.getSize(vertex).y;
+      model.scale.multiplyScalar(scale);
+      model.position.y -= bounds.min.y * scale;
+      monsterGroup = new THREE.Group();
+      monsterGroup.name = 'AbstractedKaufmo';
+      monsterGroup.position.copy(monsterPath[0]);
+      monsterGroup.rotation.y = Math.PI;
+      monsterGroup.visible = false;
+      monsterGroup.add(model);
+      outsideFX.add(monsterGroup);
       if (exteriorGroup.visible) assetCredit.hidden = false;
     }, undefined, error => console.warn('Abstracted model could not load:', error));
   }
@@ -372,8 +329,10 @@ export function createAbstraction(room, roomContainer) {
     insideFX = new THREE.Group(); insideFX.name = 'AbstractionRoom'; roomContainer.add(insideFX);
     outsideFX = new THREE.Group(); outsideFX.name = 'AbstractionOutside'; exteriorGroup.add(outsideFX);
     addRift(insideFX, -3.6, 4.3, -6.57, 1.58, -.30, true);
-    addRift(insideFX, 6.5, 4.45, -2.9, 1.2, .34);
-    addRift(insideFX, -6.5, 3.2, -.2, 1.02, -.62);
+    const rightTear = addRift(insideFX, 7.72, 4.3, -4.6, 1.35, .18, true);
+    rightTear.rotation.y = -Math.PI / 2;
+    const leftTear = addRift(insideFX, -7.72, 4.1, -.2, 1.35, -.22, true);
+    leftTear.rotation.y = Math.PI / 2;
     const ceilingTear = addRift(insideFX, 1.3, 7.77, -1.5, 1.15, .6, true);
     ceilingTear.rotation.x = Math.PI / 2;
     const floorTear = addRift(insideFX, 1.0, .083, 4.8, 1.20, -.4, true);
@@ -381,10 +340,10 @@ export function createAbstraction(room, roomContainer) {
 
     // Spread the eyes across the back wall so the abstraction feels structural.
     [
-      [-6.45, 2.65, .42, -.38], [-5.35, 5.65, .36, .16], [-4.15, 3.95, .48, -.44],
-      [-2.65, 5.82, .40, .28], [-1.18, 3.22, .35, -.20], [.38, 5.35, .45, .22],
-      [1.86, 3.60, .40, -.42], [3.48, 5.74, .47, .30], [5.12, 3.42, .44, -.24],
-      [6.42, 5.78, .36, .36]
+      [-6.45, 2.65, .58, -.38], [-5.35, 5.65, .56, .16], [-4.15, 3.95, .58, -.44],
+      [-2.65, 5.82, .55, .28], [-1.18, 3.22, .55, -.20], [.38, 5.35, .55, .22],
+      [1.86, 3.60, .55, -.42], [3.48, 5.74, .57, .30], [5.12, 3.42, .54, -.24],
+      [6.42, 5.78, .56, .36]
     ].forEach(([x, y, size, turn]) => addRift(insideFX, x, y, -6.70, size, turn, true));
     const sideEyeA = addRift(insideFX, 7.70, 5.45, -4.9, .43, .22, true);
     sideEyeA.rotation.y = -Math.PI / 2;

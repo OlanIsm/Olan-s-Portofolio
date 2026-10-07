@@ -4,7 +4,7 @@ export const projectsData = [
     tag: "COMPLETED",
     tagStyle: "border-color:#ff99bb;color:#ff99bb;background:rgba(255,153,187,0.1)",
     desc: "A boutique landing page for a local bouquet business built with Vanilla JS. Crafted with a Figma design system and Framer animations to sharpen UI/UX design & frontend execution skills.",
-    tech: ["VANILLA JS", "FIGMA", "FRAMER", "HTML/CSS"],
+    tech: ["VANILLA JS", "FIGMA", "HTML/CSS"],
     img: "img/adelliaflorist.png",
     url: "https://adelliaflorist.vercel.app/"
   },
@@ -58,7 +58,7 @@ export const projectsData = [
     tag: "COMPLETED",
     tagStyle: "border-color:#aa88ff;color:#aa88ff;background:rgba(170,136,255,0.1)",
     desc: "My first mobile CRUD application themed around Genshin Impact, allowing users to simulate buying and selling Genshin weapons and artifacts.",
-    tech: ["MOBILE", "CRUD", "JAVA/KOTLIN"],
+    tech: ["MOBILE", "CRUD", "FLUTTER"],
     img: "img/GenshinImport.png",
     url: "https://github.com/OlanIsm/Genshin-Import"
   },
@@ -69,6 +69,6 @@ export const projectsData = [
     desc: "An interactive and responsive smartphone e-commerce website. My very first basic web project built purely with vanilla HTML, CSS, and Javascript without any frameworks.",
     tech: ["HTML", "CSS", "JAVASCRIPT"],
     img: "img/V-Phone.png",
-    url: "https://github.com/OlanIsm/V-Phone"
+    url: "https://vphone-olan.vercel.app"
   }
 ];
