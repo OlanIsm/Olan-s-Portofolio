@@ -26,6 +26,15 @@ export const projectsData = [
     img: "img/VolumeMate.png",
     url: "https://github.com/OlanIsm/TechnoScape-2026-Hackathon"
   },
+    {
+    name: "Labora",
+    tag: "COMPLETED",
+    tagStyle: "border-color:#ff88aa;color:#ff88aa;background:rgba(255,136,170,0.1)",
+    desc: "A browser-based application that helps students explore Chemistry, Physics, and Biology concepts through virtual tools, simulations, observations, and guided questions",
+    tech: ["Next.js", "React", "TypeScript","Supabase Auth"],
+    img: "img/labora.png",
+    url: "https://labora-mu.vercel.app/"
+  },
   {
     name: "DOMPETRACK",
     tag: "COMPLETED",
