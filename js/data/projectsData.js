@@ -35,7 +35,7 @@ export const projectsData = [
     img: "img/labora.png",
     url: "https://labora-mu.vercel.app/"
   },
-      {
+  {
     name: "Nerdius",
     tag: "IN PROGRESS",
     tagStyle: "border-color:#ff88aa;color:#ff88aa;background:rgba(255,136,170,0.1)",
@@ -59,7 +59,7 @@ export const projectsData = [
     tagStyle: "border-color:#88ffcc;color:#88ffcc;background:rgba(136,255,204,0.1)",
     desc: "A personal finance and expense tracker web application featuring rapid manual entry, visual daily transaction trends, and intelligent spending analysis with personalized AI-driven recommendations powered by Gemini API.",
     tech: ["REACT", "NEST.TS", "POSTGRE", "GEMINI API"],
-    img: "img/mockupDompetrack.jpg",
+    img: "img/dompetrack.jpg",
     url: "https://dompetrack.vercel.app"
   },
   {
