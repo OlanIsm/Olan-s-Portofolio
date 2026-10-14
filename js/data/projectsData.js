@@ -31,18 +31,18 @@ export const projectsData = [
     tag: "COMPLETED",
     tagStyle: "border-color:#ff88aa;color:#ff88aa;background:rgba(255,136,170,0.1)",
     desc: "A browser-based application that helps students explore Chemistry, Physics, and Biology concepts through virtual tools, simulations, observations, and guided questions",
-    tech: ["Next.js", "React", "TypeScript","Supabase Auth"],
+    tech: ["Next.js", "React", "TypeScript","Supabase"],
     img: "img/labora.png",
     url: "https://labora-mu.vercel.app/"
   },
-  {
-    name: "DOMPETRACK",
-    tag: "COMPLETED",
-    tagStyle: "border-color:#88ffcc;color:#88ffcc;background:rgba(136,255,204,0.1)",
-    desc: "A personal finance and expense tracker web application featuring rapid manual entry, visual daily transaction trends, and intelligent spending analysis with personalized AI-driven recommendations powered by Gemini API.",
-    tech: ["REACT", "NEST.TS", "POSTGRE", "GEMINI API"],
-    img: "img/mockupDompetrack.jpg",
-    url: "https://dompetrack.vercel.app"
+      {
+    name: "Nerdius",
+    tag: "IN PROGRESS",
+    tagStyle: "border-color:#ff88aa;color:#ff88aa;background:rgba(255,136,170,0.1)",
+    desc: "Nerdungeon is a gamified quiz web app that turns study materials, like lecture PDFs, into 2D adventure 'expeditions.' Users learn by playing a 10-question battle quiz for each chapter",
+    tech: ["ExpressJs", "React","Vite","TypeScript","Supabase"],
+    img: "img/nerdius.png",
+    url: "https://github.com/OlanIsm/Nerdius"
   },
   {
     name: "OLAN.DEV (PORTFOLIO)",
@@ -52,6 +52,15 @@ export const projectsData = [
     tech: ["THREE.JS", "HTML", "CSS", "JAVASCRIPT"],
     img: "img/Olan.dev.png",
     url: "https://github.com/OlanIsm/Olan-s-Portofolio"
+  },
+  {
+    name: "DOMPETRACK",
+    tag: "COMPLETED",
+    tagStyle: "border-color:#88ffcc;color:#88ffcc;background:rgba(136,255,204,0.1)",
+    desc: "A personal finance and expense tracker web application featuring rapid manual entry, visual daily transaction trends, and intelligent spending analysis with personalized AI-driven recommendations powered by Gemini API.",
+    tech: ["REACT", "NEST.TS", "POSTGRE", "GEMINI API"],
+    img: "img/mockupDompetrack.jpg",
+    url: "https://dompetrack.vercel.app"
   },
   {
     name: "EMITRACK",
