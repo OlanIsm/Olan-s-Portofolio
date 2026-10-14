@@ -3,10 +3,10 @@ import { pixelIcon } from './pixelIcons.js';
 
 export function openContactModal() {
   const links = [
-    ['Instagram', '@olan.ism', 'https://instagram.com/olan.ism', '/img/instagram.jpg'],
-    ['GitHub', 'OlanIsm', 'https://github.com/OlanIsm', '/img/github.png'],
-    ['LinkedIn', 'Insan Maulana', 'https://www.linkedin.com/in/insan-maulana-104a04263', 'img/linkedin.png'],
-    ['YouTube', '@olanwalaweh', 'https://youtube.com/@olanwalaweh', 'img/youtube.png'],
+    ['Instagram', '@olan.ism', 'https://instagram.com/olan.ism', /img/instagram.jpg],
+    ['GitHub', 'OlanIsm', 'https://github.com/OlanIsm', /img/github.png],
+    ['LinkedIn', 'Insan Maulana', 'https://www.linkedin.com/in/insan-maulana-104a04263', img/linkedin.png],
+    ['YouTube', '@olanwalaweh', 'https://youtube.com/@olanwalaweh', img/youtube.png],
   ];
   const body = `<p class="menu-intro">Have something in mind? There’s always room for a conversation.</p>
     <div class="social-grid">${links.map(([name, handle, url, icon]) => `

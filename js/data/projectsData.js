@@ -59,7 +59,7 @@ export const projectsData = [
     tagStyle: "border-color:#88ffcc;color:#88ffcc;background:rgba(136,255,204,0.1)",
     desc: "A personal finance and expense tracker web application featuring rapid manual entry, visual daily transaction trends, and intelligent spending analysis with personalized AI-driven recommendations powered by Gemini API.",
     tech: ["REACT", "NEST.TS", "POSTGRE", "GEMINI API"],
-    img: "img/dompetrack.jpg",
+    img: "img/dompetrack.png",
     url: "https://dompetrack.vercel.app"
   },
   {
