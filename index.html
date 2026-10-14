@@ -109,6 +109,7 @@
       <span class="loader-tip-tag">HINT:</span>
       <span class="loader-tip-text">Click glowing objects inside the room to discover projects &amp; skills!</span>
     </div>
+    <button id="loader-retry" type="button" hidden>RETRY &#8635;</button>
   </div>
 </div>
 
@@ -188,7 +189,26 @@
 }
 </script>
 
-<script type="module" src="main.js?v=162"></script>
+<script type="module" src="main.js?v=163"></script>
+
+<!-- Watchdog: runs even if the 3D module fails (blocked CDN, no WebGL).
+     Never leaves the visitor staring at a frozen loader. -->
+<script>
+(function () {
+  var retry = document.getElementById('loader-retry');
+  if (retry) retry.addEventListener('click', function () { location.reload(); });
+  setTimeout(function () {
+    if (document.body.dataset.ready === 'true') return;
+    var loader = document.getElementById('loader');
+    var status = document.getElementById('loader-status-text');
+    var info = document.getElementById('loader-file-info');
+    if (loader) loader.classList.add('stalled');
+    if (status) status.textContent = 'STILL LOADING. CHECK YOUR CONNECTION, THEN RETRY.';
+    if (info) info.textContent = 'IF THIS PERSISTS, THIS BROWSER MAY LACK WEBGL.';
+    if (retry) retry.hidden = false;
+  }, 30000);
+})();
+</script>
 
 </body>
 </html>

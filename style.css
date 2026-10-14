@@ -290,6 +290,22 @@ body {
   color: #46684f;
 }
 
+/* Shown only by the watchdog when the 3D module never boots. */
+#loader.stalled { cursor: auto; }
+#loader-retry {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 10px;
+  letter-spacing: 1px;
+  color: #fff6dc;
+  background: #51695b;
+  border: 2px solid #384539;
+  box-shadow: 3px 4px 0 #c5b99d;
+  padding: 12px 22px;
+  cursor: pointer;
+}
+#loader-retry:hover { background: #384539; }
+#loader-retry[hidden] { display: none; }
+
 /* ── MAIN MENU ── */
 #menu {
   position: fixed; inset: 0;

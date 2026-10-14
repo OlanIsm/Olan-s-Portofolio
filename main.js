@@ -710,6 +710,8 @@ document.addEventListener('visibilitychange', () => {
 });
 
 // Show actual asset progress, then warm both scenes before the first entrance.
+// caveman: the loader must never get stuck. Dismissal is guarded so it runs
+// exactly once, with a timeout fallback if an asset hangs.
 const loaderEl = document.getElementById('loader');
 const loaderStatusText = document.getElementById('loader-status-text');
 const loaderBarFill = document.getElementById('loader-bar-fill');
@@ -725,29 +727,40 @@ THREE.DefaultLoadingManager.onProgress = (_url, loaded, total) => {
 THREE.DefaultLoadingManager.onError = () => {
   if (loaderFileInfo) loaderFileInfo.textContent = 'A DETAIL COULD NOT LOAD. THE WORLD IS STILL OPEN.';
 };
-assetsReady.then(() => {
-  setExteriorActive(false);
-  setRoomActive(true);
-  setSceneAtmosphere(false);
-  camera.position.copy(CAM_STATES.ROOM.pos);
-  camera.lookAt(CAM_STATES.ROOM.target);
-  renderer.compile(scene, camera);
-  renderer.render(scene, camera);
-  setRoomActive(false);
-  setExteriorActive(true);
-  setSceneAtmosphere(true);
-  camera.position.copy(CAM_STATES.OUTSIDE.pos);
-  camTarget.copy(CAM_STATES.OUTSIDE.target);
-  camera.lookAt(camTarget);
-  renderer.compile(scene, camera);
-  renderer.render(scene, camera);
+let loaderDismissed = false;
+function dismissLoader(partial) {
+  if (loaderDismissed) return;
+  loaderDismissed = true;
+  try {
+    setExteriorActive(false);
+    setRoomActive(true);
+    setSceneAtmosphere(false);
+    camera.position.copy(CAM_STATES.ROOM.pos);
+    camera.lookAt(CAM_STATES.ROOM.target);
+    renderer.compile(scene, camera);
+    renderer.render(scene, camera);
+    setRoomActive(false);
+    setExteriorActive(true);
+    setSceneAtmosphere(true);
+    camera.position.copy(CAM_STATES.OUTSIDE.pos);
+    camTarget.copy(CAM_STATES.OUTSIDE.target);
+    camera.lookAt(camTarget);
+    renderer.compile(scene, camera);
+    renderer.render(scene, camera);
+  } catch (error) {
+    console.warn('Scene warmup skipped:', error);
+  }
   if (loaderBarFill) loaderBarFill.style.transform = 'scaleX(1)';
   if (loaderPercent) loaderPercent.textContent = '100%';
   if (loaderStatusText) loaderStatusText.textContent = 'WELCOME TO MY LITTLE WORLD.';
+  if (partial && loaderFileInfo) loaderFileInfo.textContent = 'A DETAIL COULD NOT LOAD. THE WORLD IS STILL OPEN.';
   loaderEl?.classList.add('slide-up');
   menuEl.classList.add('visible', 'pop-in');
   menuEl.inert = false;
   document.body.dataset.ready = 'true';
   setTimeout(() => loaderEl?.remove(), reducedMotion.matches ? 200 : 500);
   startBgMusic();
-});
+}
+assetsReady.then(() => dismissLoader(false));
+// If an asset hangs, enter with whatever loaded instead of sitting forever.
+setTimeout(() => dismissLoader(true), 20000);
