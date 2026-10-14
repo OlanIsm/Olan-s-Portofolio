@@ -72,6 +72,15 @@ export const projectsData = [
     url: "https://github.com/OlanIsm/Carbon-Emission-Ai-Prediction"
   },
   {
+    name: "V-PHONE",
+    tag: "COMPLETED",
+    tagStyle: "",
+    desc: "An interactive and responsive smartphone e-commerce website. My very first basic web project built purely with vanilla HTML, CSS, and Javascript without any frameworks.",
+    tech: ["HTML", "CSS", "JAVASCRIPT"],
+    img: "img/V-Phone.png",
+    url: "https://vphone-olan.vercel.app"
+  },
+  {
     name: "GENSHIN IMPORT",
     tag: "COMPLETED",
     tagStyle: "border-color:#aa88ff;color:#aa88ff;background:rgba(170,136,255,0.1)",
@@ -80,13 +89,4 @@ export const projectsData = [
     img: "img/GenshinImport.png",
     url: "https://github.com/OlanIsm/Genshin-Import"
   },
-  {
-    name: "V-PHONE",
-    tag: "COMPLETED",
-    tagStyle: "",
-    desc: "An interactive and responsive smartphone e-commerce website. My very first basic web project built purely with vanilla HTML, CSS, and Javascript without any frameworks.",
-    tech: ["HTML", "CSS", "JAVASCRIPT"],
-    img: "img/V-Phone.png",
-    url: "https://vphone-olan.vercel.app"
-  }
 ];
